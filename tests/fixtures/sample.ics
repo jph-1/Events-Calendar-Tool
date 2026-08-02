@@ -1,0 +1,25 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Test Venue//Events//EN
+BEGIN:VEVENT
+UID:evt-001@testvenue.example
+DTSTART:20260815T190000
+DTEND:20260815T220000
+SUMMARY:Salsa Night Social
+DESCRIPTION:Live salsa dancing with a local band\, beginners welcome.
+LOCATION:The Dance Hall
+URL:https://testvenue.example/events/salsa-night
+END:VEVENT
+BEGIN:VEVENT
+UID:evt-002@testvenue.example
+DTSTART:20260820T100000
+SUMMARY:Community Garden Volunteer Day
+DESCRIPTION:Monthly gardening club workday in Montrose.
+LOCATION:Montrose Community Garden
+END:VEVENT
+BEGIN:VEVENT
+UID:evt-003@testvenue.example
+DTSTART:20260901
+SUMMARY:All-Day Maker Space Open House
+END:VEVENT
+END:VCALENDAR

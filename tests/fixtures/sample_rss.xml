@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Test Gallery Announcements</title>
+    <item>
+      <title>New Art Exhibition Opening</title>
+      <description>A new gallery show featuring independent film stills.</description>
+      <link>https://testgallery.example/exhibitions/new-show</link>
+      <guid>https://testgallery.example/exhibitions/new-show</guid>
+      <pubDate>Sat, 15 Aug 2026 19:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Woodworking Basics Workshop</title>
+      <description>Hands-on woodworking workshop at the local maker space.</description>
+      <link>https://testgallery.example/workshops/woodworking</link>
+      <guid>https://testgallery.example/workshops/woodworking</guid>
+      <pubDate>Wed, 20 Aug 2026 18:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,22 @@
+[
+  {
+    "title": "Indie Film Night: Shorts Program",
+    "description": "A curated program of independent short films.",
+    "start_dt": "2026-09-10T19:30:00",
+    "end_dt": "2026-09-10T21:30:00",
+    "location_name": "Rooftop Cinema Collective",
+    "address": "123 Main St, Houston, TX",
+    "neighborhood": "Montrose",
+    "url": "https://example.org/indie-film-night"
+  },
+  {
+    "title": "Kettlebell Club Meetup",
+    "description": "Weekly kettlebell training session, all levels.",
+    "start_dt": "2026-09-12T08:00:00",
+    "end_dt": null,
+    "location_name": "Buffalo Bayou Park",
+    "address": "",
+    "neighborhood": "",
+    "url": ""
+  }
+]

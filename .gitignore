@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# local user data — profile and DB are personal, not checked in
+config/profile.json
+data/*.db
+data/*.db-journal

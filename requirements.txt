@@ -1,0 +1,3 @@
+# No runtime dependencies — events_tool is built entirely on the Python 3
+# standard library (sqlite3, urllib, xml.etree, argparse) so it runs anywhere
+# a Python 3 interpreter exists, with no pip install required.
