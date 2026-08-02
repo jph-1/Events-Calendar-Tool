@@ -3,10 +3,12 @@
 A personal, source-agnostic events discovery and calendar tool. It was built
 around one problem: too many pages, groups, and newsletters to track for
 things like art shows, indie film, local bands, salsa nights, gardening and
-kettlebell clubs, book clubs/meetups, and maker-space workshops. It compiles
+kettlebell clubs, book clubs/meetups, comedy, trivia/board games, networking
+mixers, natural building workshops, and maker-space workshops. It compiles
 matching events into a personal calendar you curate over time, and it
-answers ad-hoc questions like *"I want to salsa dance tonight"* or *"any new
-art exhibitions near Montrose?"*
+answers ad-hoc questions like *"salsa tonight,"* *"new gallery exhibitions
+near Montrose,"* *"real-estate networking this week,"* or *"live jazz music
+for August 1st."*
 
 It ships seeded for Houston, TX, but city/state and the entire interest list
 are just config — point it anywhere.
@@ -14,13 +16,56 @@ are just config — point it anywhere.
 No paid APIs or accounts are required. It runs entirely on the Python
 standard library (no `pip install` needed to use it).
 
+## Where this is in its build
+
+This is being built in two phases, by design:
+
+- **Phase 1 (this repo, today)**: the engine — data model, ingestion,
+  matching, dedup, personal signals, coverage transparency — plus a CLI and
+  a static, read-only HTML calendar prototype (month/agenda views) you
+  regenerate on demand. Sign-in is a single local account; there's no
+  live server.
+- **Phase 2 (planned next)**: a local Flask web app on top of the same
+  engine — real session-based sign-in, an interactive calendar (actions
+  like save/attend/recategorize happen in the UI, not just the CLI), and a
+  live `.ics`/webcal subscription endpoint for Google Calendar and friends.
+
+Everything below that says "for now, use the CLI command X" is a Phase 1
+limitation that Phase 2 is expected to remove.
+
+## Principles this tool holds itself to
+
+- **Never fabricate.** No invented events, dates/times, sources, attendance,
+  reviews, ratings, or testimonials — and no coverage claims broader than
+  what was actually checked. Every event row is tagged with where it came
+  from (`events coverage`, `events roundup` both surface this) so "this is
+  from a real feed" vs. "this is a lead you pasted, unverified" is always
+  visible, never blurred.
+- **Source facts vs. personal signals.** An event's ingested facts
+  (title, time, description, its `source_category`) are never overwritten
+  by your personal edits. Corrections layer on top: `user_category`,
+  `saved`, `user_notes` are separate columns from day one. `events
+  recategorize` fixes a miscategorized event without touching what the
+  source actually said.
+- **Honest coverage, not implied completeness.** `events coverage` and the
+  roundup's disclosure section distinguish four states per category:
+  automated (a real feed has actually produced events here), automated
+  source enabled but no hits yet, reference-only (only manual/newsletter
+  entries exist), and no coverage at all. A category with zero events never
+  silently reads as "nothing's happening" — it reads as "nothing's been
+  checked."
+
 ## How it's put together
 
 - **`config/profile.json`** — your hand-editable profile: location,
   interests (keyword → category), and ingestion sources. Seeded from
   `config/profile.example.json` (Houston defaults) by `events init`.
-- **`data/events.db`** — a local SQLite database holding events and an
-  ingestion audit log. Nothing leaves your machine.
+  Categories: `art, maker, music, film, books, gardening, fitness, dance,
+  comedy, sports_games, natural_building, networking, other`.
+- **`data/events.db`** — a local SQLite database holding events, an
+  ingestion audit log, and imported places. Tracked in git (see
+  "Background cadence" below) so state survives this running in an
+  ephemeral container.
 - **Ingestion adapters** — pluggable sources that turn some feed/text into
   candidate events:
   - **RSS/iCal** (`events ingest`) — real, working, no API key. Many venues,
@@ -31,6 +76,9 @@ standard library (no `pip install` needed to use it).
     something you already know about, or something you already attended.
   - **Newsletter paste** (`events extract-prompt` / `events ingest-text`) —
     see below.
+  - **Lead** (`events source add --type lead`) — a known account/page (e.g.
+    an Instagram handle) worth checking by hand. No adapter fetches it, but
+    it shows up in `events coverage` as a known gap, not silently missing.
   - **Future/roadmap** (`src/events_tool/ingestion/future_adapters.py`) —
     Eventbrite, Meetup, Ticketmaster, Instagram/Facebook Events. These
     require paid/authenticated APIs we don't have keys for; the classes are
@@ -43,14 +91,32 @@ standard library (no `pip install` needed to use it).
   `candidate` by default (`events review` to confirm/reject), so noisy
   auto-ingestion doesn't silently pollute your calendar. Manual adds and
   attended-log entries go straight to `confirmed`/`attended`.
+- **Personal signals** — `events save`/`unsave` (bookmark), `events
+  attend`/`unattend` (mark attended, or reverse it back to confirmed),
+  `events log-experience` (your own notes on an event, kept separate from
+  its source description), `events recategorize` (category correction that
+  never touches the ingested fact).
+- **Places** — `events places import` reads a Google My Maps KML export or
+  a plain CSV of venues you already trust, as a reference list (`events
+  places list`).
 - **Query engine** — a lightweight phrase parser for ad-hoc questions
-  (`events query`), plus a structured filter command (`events show`).
+  (`events query`), including specific dates ("August 1st", "8/1"), relative
+  ones ("tonight", "this week"), and a structured filter command (`events
+  show`).
 - **Weekly roundup** — `events roundup` selects newly-confirmed events in
-  the next N days, grouped by category, and can render Markdown, HTML, or
-  an `.ics` file.
+  the next N days, grouped by category, renders Markdown/HTML/ICS, and
+  always prints a coverage disclosure: what was checked, what wasn't, and a
+  reminder that nothing in it is invented.
 - **ICS export** — `events export-ics` writes a hand-rolled, dependency-free
   RFC 5545 calendar file you can import into Google Calendar, Apple
-  Calendar, Outlook, etc.
+  Calendar, Outlook, etc. (A live webcal *subscription* endpoint, so the
+  calendar updates itself instead of needing re-import, is a Phase 2 item —
+  it needs a persistently-running server.)
+- **Calendar prototype** (`events export-snapshot` +
+  `scripts/build_calendar_artifact.py`) — a self-contained, read-only HTML
+  page with month and agenda views, category/saved filters, a coverage
+  panel, and an event detail drawer showing provenance and the CLI command
+  to act on that event. Regenerate it any time your data changes.
 
 ## Setup
 
@@ -81,6 +147,8 @@ events interest list
 
 events source add --name my-favorite-venue --type ical \
   --url "https://somevenue.example/events/?ical=1"
+events source add --name some-gallery-instagram --type lead \
+  --url "https://instagram.com/some_gallery"   # known lead, checked manually
 events source list
 ```
 
@@ -94,13 +162,13 @@ implemented yet — using it today prints a message and exits. For now, use
 ## Weekly ingestion
 
 ```bash
-events ingest --all              # fetch every enabled RSS/iCal source
+events ingest                    # fetch every enabled RSS/iCal source
 events ingest --source my-favorite-venue
 events review                    # walk pending candidates: confirm / reject / skip
 ```
 
-Run `events ingest --all && events review` on whatever cadence you like —
-weekly cron, a reminder, or just whenever a newsletter lands.
+Run `events ingest && events review` on whatever cadence you like. See
+"Background cadence" below for how this actually runs unattended.
 
 ## Feeding in a newsletter you already subscribe to
 
@@ -119,7 +187,9 @@ events ingest-text --heuristic --file newsletter.txt
 ```
 This regex-extracts lines that contain both a recognizable date (e.g. "Aug
 15" or "August 15, 2026") and a time (e.g. "7:00pm"), and only keeps ones
-that match an active interest keyword. Always review these afterward.
+that match an active interest keyword. Always review these afterward —
+both paths are tagged `user-lead-*` in `events coverage`, never presented
+as independently verified.
 
 ## Logging something you already attended or already know about
 
@@ -133,15 +203,44 @@ events log-attended --title "Indie Film Screening at 14 Pews" \
   --date 2026-07-20T19:00:00 --category film --location "14 Pews"
 ```
 
-Logged/attended events feed the same calendar and inform your history —
-useful context if you later want to notice patterns in what you actually go to.
+## Managing personal signals
+
+```bash
+events save 12                                    # bookmark
+events unsave 12
+events attend 12                                   # mark attended
+events unattend 12                                  # reverse it (back to confirmed)
+events log-experience 12 --notes "Great band, will go again"
+events recategorize 12 --category dance             # fix a miscategorized event
+```
+
+`recategorize` only ever sets a `user_category` override — the original
+`source_category` an ingestion adapter or manual entry recorded is always
+still there (`events show` marks overridden events `(recategorized)`).
+
+## Bringing your own leads
+
+- **Newsletter text** — see above.
+- **An event URL/details you already have** — `events add-event --url ...`.
+- **A place you already trust** — `events places import --file
+  mylist.kml --name "Favorite Galleries"` (export from Google My Maps:
+  menu → Export to KML) or a CSV with `name,address,lat,lon,tags` columns.
+  `events places list` to review what's imported. (Scraping a public Maps
+  share link directly was considered and rejected: Google's unofficial page
+  markup isn't a stable API and can silently break without notice.)
+- **A known account/page you check yourself** — `events source add --type
+  lead`, so it's tracked in `events coverage` as a real gap instead of
+  invisible.
 
 ## Ad-hoc queries
 
 ```bash
-events query "I want to salsa dance tonight"
+events query "salsa tonight"
 events query "gardening workshop" --near "no limit"
-events query "any new art exhibitions" --near Montrose
+events query "new gallery exhibitions" --near Montrose
+events query "real estate networking this week"
+events query "live comedy shows this week"
+events query "live jazz music for August 1st"
 ```
 
 `events show` gives structured filtering instead of phrase parsing:
@@ -149,7 +248,22 @@ events query "any new art exhibitions" --near Montrose
 ```bash
 events show --category art --near Montrose --from 2026-08-01 --to 2026-08-31
 events show --status candidate   # same as `events review`, without the prompts
+events show --saved              # your bookmarked events
 ```
+
+## Understanding your coverage
+
+```bash
+events coverage
+```
+
+Prints, per source: whether it's automated/enabled, lead-only, or
+reference-only, and when it last ran successfully. Per category: whether
+automated coverage is *confirmed* (a real feed has actually produced an
+event here), an automated source is enabled but hasn't surfaced anything
+yet, coverage is reference-only (manual/newsletter entries only), or there's
+no coverage at all yet. `events roundup` prints the same disclosure,
+scoped to its window, every time.
 
 ## Weekly roundup and calendar export
 
@@ -160,21 +274,81 @@ events roundup --days 7 --export ics --out this_week.ics
 events export-ics --out full_calendar.ics   # all confirmed+attended events, any date
 ```
 
-`roundup` marks the events it included so the next run doesn't repeat them;
-pass `--no-mark-included` to preview without consuming the queue.
+`roundup` marks the events it included so the next run doesn't repeat them
+(pass `--no-mark-included` to preview without consuming the queue), and
+always ends with the coverage disclosure described above.
+
+### Calendar prototype (Phase 1 UI)
+
+```bash
+events export-snapshot --out data/snapshot.json
+python3 scripts/build_calendar_artifact.py --snapshot data/snapshot.json --out calendar.html
+```
+
+Open `calendar.html` in a browser: month and agenda views, category/saved
+filters, a coverage panel, and a detail drawer per event (source link,
+provenance explanation, and the exact CLI command to save/attend/
+recategorize it — this view is read-only until Phase 2's live app).
+
+### Why a 7-day roundup window but no fixed calendar horizon
+
+`events roundup --days N` defaults to 7 (a weekly digest), but `events show`
+and the calendar prototype have no hard horizon — they display whatever is
+in the database. In practice that's bounded by how far out your ingested
+sources publish (most venue feeds only list ~30-60 days ahead), so a ~30-day
+practical horizon emerges without the tool needing to enforce one.
+
+## Background cadence
+
+Two mechanisms, so this works whether or not you're using this tool inside
+Claude Code:
+
+1. **A Claude Code Routine** ("Houston Events Weekly Ingest", weekly on
+   Monday) — runs `events ingest`, regenerates the roundup, and reports a
+   summary (sources checked, pending-review count, uncovered categories)
+   back into this session. This is the literal "background discovery
+   cadence" for as long as you're working with this tool via Claude Code.
+2. **`scripts/run_weekly_ingest.sh`** — the same ingest+roundup steps as a
+   plain shell script, for a normal crontab/Task Scheduler entry once this
+   is self-hosted outside Claude Code:
+   ```
+   0 8 * * 1 /path/to/Events-Calendar-Tool/scripts/run_weekly_ingest.sh >> /path/to/Events-Calendar-Tool/data/ingest.log 2>&1
+   ```
+
+**On persistence:** this runs in an ephemeral container that can be
+reclaimed between sessions, so `data/events.db` and `config/profile.json`
+are tracked in git — that's the durability mechanism for a private personal
+repo today. If this tool ever moves to a shared or public repo, swap that
+for a real hosted database instead of committing the DB file.
+
+## Future scope (not built, on purpose)
+
+These are real product directions, deliberately deferred rather than
+half-built: expansion beyond Houston (already just a config value, but
+untested at scale), per-use "find events near me" via device geolocation
+with a consent prompt every time, friend invitations, shared event
+calendars, RSVPs, and privacy-preserving group availability. Building these
+well needs real privacy design (especially the location and
+friend/group-availability features) that hasn't been done yet — flagged
+here rather than shipped half-considered.
 
 ## Project layout
 
 ```
 config/profile.example.json     Houston-seeded default profile
+templates/calendar_prototype.html   calendar prototype template (JSON placeholder)
+scripts/
+  build_calendar_artifact.py    injects a snapshot into the template
+  run_weekly_ingest.sh          OS-cron entry point for self-hosted use
 src/events_tool/
   cli.py                        command-line entry point
   config.py                     profile.json load/save/edit
   db.py, models.py, store.py    SQLite schema, dataclasses, query/insert API
   dedup.py                      fingerprinting so re-seen events don't duplicate
   matching.py                   interest keyword scoring
-  query.py                      ad-hoc phrase parsing ("tonight", "near X", ...)
-  roundup.py, digest.py         weekly selection + Markdown/HTML rendering
+  query.py                      ad-hoc phrase parsing ("tonight", "August 1st", "near X", ...)
+  places.py                     KML/CSV places-list import
+  roundup.py, digest.py         weekly selection + Markdown/HTML rendering + coverage disclosure
   ics_export.py                 dependency-free RFC 5545 writer
   ingestion/
     base.py                     SourceAdapter interface

@@ -3,7 +3,9 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 
-# local user data — profile and DB are personal, not checked in
-config/profile.json
-data/*.db
+# data/events.db and config/profile.json ARE tracked in git (see README's
+# "Background cadence" section): this runs in an ephemeral container that
+# can be reclaimed between sessions, so committing them is the persistence
+# mechanism for a private personal repo. Swap this for a real hosted DB if
+# this ever moves off a single private repo.
 data/*.db-journal

@@ -2,8 +2,39 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Optional
+
+# The full category taxonomy the product targets. Interests in profile.json
+# should map to one of these; "other" is the catch-all for anything that
+# doesn't fit (never silently dropped).
+CATEGORIES = [
+    "art",
+    "maker",
+    "music",
+    "film",
+    "books",
+    "gardening",
+    "fitness",
+    "dance",
+    "comedy",
+    "sports_games",
+    "natural_building",
+    "networking",
+    "other",
+]
+
+# How an event's facts were established. Never mixed with user-added
+# signals (saved/user_category/user_notes) — this describes the *event
+# record's* provenance, used to render honest coverage/trust labels instead
+# of presenting every row as equally verified.
+VERIFICATIONS = [
+    "automated-source",   # fetched live from a working RSS/iCal adapter
+    "user-manual",        # typed in directly (add-event / log-attended)
+    "user-lead-structured",  # newsletter text, extracted via the LLM-prompt path
+    "user-lead-heuristic",   # newsletter text, extracted via the regex fallback
+]
+
+VALID_STATUSES = {"candidate", "confirmed", "attended", "rejected"}
 
 
 @dataclass
@@ -25,7 +56,7 @@ class Interest:
 @dataclass
 class Source:
     name: str
-    type: str  # "rss" | "ical" | "manual" | "newsletter"
+    type: str  # "rss" | "ical" | "manual" | "newsletter" | "lead"
     url: str = ""
     enabled: bool = True
     notes: str = ""
@@ -61,7 +92,8 @@ class Event:
     id: Optional[int]
     title: str
     description: str
-    category: str
+    source_category: str
+    user_category: Optional[str]
     start_dt: str
     end_dt: Optional[str]
     location_name: str
@@ -77,8 +109,18 @@ class Event:
     external_uid: str
     dedup_key: str
     status: str  # "candidate" | "confirmed" | "attended" | "rejected"
+    verification: str
+    saved: bool
+    user_notes: str
     created_at: str
     updated_at: str
+
+    @property
+    def category(self) -> str:
+        """The effective category to display/filter by: a user correction
+        takes precedence over the ingested source_category, without ever
+        overwriting it."""
+        return self.user_category or self.source_category
 
 
 @dataclass
@@ -91,3 +133,16 @@ class IngestionRun:
     items_deduped: int
     status: str
     notes: str = ""
+
+
+@dataclass
+class Place:
+    id: Optional[int]
+    name: str
+    address: str
+    lat: Optional[float]
+    lon: Optional[float]
+    tags: str
+    list_name: str
+    source: str
+    imported_at: str

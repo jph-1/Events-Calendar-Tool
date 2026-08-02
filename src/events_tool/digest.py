@@ -5,7 +5,7 @@ tool's zero-runtime-dependency goal.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def _format_when(start_dt: str) -> str:
@@ -59,3 +59,45 @@ def render_html(grouped: dict[str, list], title: str = "Weekly Activities Roundu
             parts.append("</ul>")
     parts.append("</body></html>")
     return "\n".join(parts) + "\n"
+
+
+def render_coverage_text(store, profile, window_days: int = 7) -> str:
+    """The 'what was checked, what was not' disclosure that must accompany
+    any roundup or coverage view — this is the single source of truth for
+    that disclosure so the CLI, the weekly Routine's report, and (later) the
+    web app all say exactly the same thing about what's automated vs. a
+    known-but-unchecked lead vs. reference-only.
+    """
+    since = (datetime.now() - timedelta(days=window_days)).isoformat(timespec="seconds")
+    last_runs = store.last_ingestion_by_source()
+    automated_sources = [s for s in profile.sources if s.type in ("ical", "rss")]
+    lead_sources = [s for s in profile.sources if s.type == "lead"]
+
+    lines = ["Coverage: what this roundup checked"]
+    if automated_sources:
+        for s in automated_sources:
+            run = last_runs.get(s.name)
+            if not s.enabled:
+                lines.append(f"  {s.name}: disabled, not checked")
+            elif run and run["last_run_at"] >= since:
+                lines.append(f"  {s.name}: checked automatically (last run {run['last_run_at']}, status {run['status']})")
+            elif run:
+                lines.append(
+                    f"  {s.name}: enabled, but last checked {run['last_run_at']} "
+                    f"(older than this window — run `events ingest` again)"
+                )
+            else:
+                lines.append(f"  {s.name}: enabled, but never checked yet — run `events ingest`")
+    else:
+        lines.append("  No automated (RSS/iCal) sources configured yet.")
+
+    if lead_sources:
+        lines.append("  Known leads NOT automatically checked (no working adapter yet):")
+        for s in lead_sources:
+            lines.append(f"    {s.name} -> {s.url or '(no url)'} — {s.notes or 'check manually'}")
+
+    lines.append(
+        "  This roundup contains only events from real ingested sources, your own manual "
+        "entries, or newsletter text you supplied yourself — nothing here is invented."
+    )
+    return "\n".join(lines) + "\n"
