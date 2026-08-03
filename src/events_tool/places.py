@@ -13,10 +13,18 @@ from __future__ import annotations
 import csv
 import io
 import json
+import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 
 _KML_NS = {"kml": "http://www.opengis.net/kml/2.2"}
+_WHITESPACE_RE = re.compile(r"\s+")
+
+
+def _clean(value: str) -> str:
+    """Collapse embedded newlines/runs of whitespace — source CSVs sometimes
+    wrap a name/address across lines inside a quoted field."""
+    return _WHITESPACE_RE.sub(" ", value).strip()
 
 # Column name aliases seen across different "export my Google Maps saved
 # places" tools, so a CSV doesn't have to be reshaped by hand before import.
@@ -56,12 +64,12 @@ def parse_kml(text: str) -> list[RawPlace]:
 
     for placemark in placemarks:
         name_el = _find_first(placemark, "name")
-        name = (name_el.text or "").strip() if name_el is not None and name_el.text else ""
+        name = _clean(name_el.text or "") if name_el is not None and name_el.text else ""
         if not name:
             continue
 
         desc_el = _find_first(placemark, "description")
-        description = (desc_el.text or "").strip() if desc_el is not None and desc_el.text else ""
+        description = _clean(desc_el.text or "") if desc_el is not None and desc_el.text else ""
 
         lat = lon = None
         coords_el = placemark.find(".//kml:coordinates", _KML_NS)
@@ -126,7 +134,7 @@ def parse_csv(text: str) -> list[RawPlace]:
     places: list[RawPlace] = []
     for row in reader:
         lookup = _row_lookup(row)
-        name = (lookup.get("name") or "").strip()
+        name = _clean(lookup.get("name") or "")
         if not name:
             continue
 
@@ -139,7 +147,7 @@ def parse_csv(text: str) -> list[RawPlace]:
         places.append(
             RawPlace(
                 name=name,
-                address=(lookup.get("address") or "").strip(),
+                address=_clean(lookup.get("address") or ""),
                 lat=_parse_float(_first_present(lookup, _LAT_KEYS)),
                 lon=_parse_float(_first_present(lookup, _LON_KEYS)),
                 tags=tags,

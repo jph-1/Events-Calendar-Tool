@@ -83,3 +83,63 @@ def test_parse_places_file_rejects_unknown_format():
         assert False, "expected ValueError"
     except ValueError:
         pass
+
+
+# Real-world export schema (e.g. from third-party "export my Google Maps
+# saved places" tools): latitude/longitude instead of lat/lon, a JSON-array
+# 'types' column instead of 'tags', a url alias chain, and an is_active flag.
+GOOGLE_EXPORT_CSV = (
+    "name,address,website,google_maps_url,latitude,longitude,types,is_active\n"
+    '93\' Til,"1601 W Main St, Houston, TX 77006",,'
+    "https://www.google.com/maps/search/?api=1&query=93%27+Til,,,[],true\n"
+    "Asia Society Texas Center,\"1370 Southmore Blvd, Houston, TX 77004\",,"
+    "https://www.google.com/maps/search/?api=1&query=Asia+Society,29.7263093,-95.3846713,"
+    '"[""establishment"",""museum"",""point_of_interest"",""tourist_attraction""]",true\n'
+    "Closed Place,\"1 Nowhere St\",https://closed.example,,29.0,-95.0,[],false\n"
+)
+
+
+def test_parse_csv_understands_latitude_longitude_aliases():
+    places = parse_csv(GOOGLE_EXPORT_CSV)
+    asia = next(p for p in places if p.name == "Asia Society Texas Center")
+    assert asia.lat == 29.7263093
+    assert asia.lon == -95.3846713
+
+
+def test_parse_csv_derives_tags_from_json_types_column():
+    places = parse_csv(GOOGLE_EXPORT_CSV)
+    asia = next(p for p in places if p.name == "Asia Society Texas Center")
+    assert asia.tags == "establishment;museum;point_of_interest;tourist_attraction"
+
+
+def test_parse_csv_empty_types_array_yields_empty_tags():
+    places = parse_csv(GOOGLE_EXPORT_CSV)
+    til = next(p for p in places if "Til" in p.name)
+    assert til.tags == ""
+
+
+def test_parse_csv_url_falls_back_to_google_maps_url_when_website_is_blank():
+    places = parse_csv(GOOGLE_EXPORT_CSV)
+    til = next(p for p in places if "Til" in p.name)
+    assert til.url.startswith("https://www.google.com/maps/search")
+
+
+def test_parse_csv_skips_rows_marked_inactive():
+    places = parse_csv(GOOGLE_EXPORT_CSV)
+    names = {p.name for p in places}
+    assert "Closed Place" not in names
+    assert len(places) == 2
+
+
+def test_parse_csv_collapses_embedded_newlines_in_name_and_address():
+    text = (
+        "name,address\n"
+        '"Hope Farms Urban Agricultural Showcase and Training Center - Recipe for \nSuccess",'
+        '"10401 Scott St, Houston,\nTX 77051"\n'
+    )
+    places = parse_csv(text)
+    assert len(places) == 1
+    assert "\n" not in places[0].name
+    assert "\n" not in places[0].address
+    assert places[0].name == "Hope Farms Urban Agricultural Showcase and Training Center - Recipe for Success"
+    assert places[0].address == "10401 Scott St, Houston, TX 77051"

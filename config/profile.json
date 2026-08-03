@@ -1,0 +1,221 @@
+{
+  "location": {
+    "city": "Houston",
+    "state": "TX",
+    "lat": null,
+    "lon": null
+  },
+  "future_flags": {
+    "use_geolocation": false
+  },
+  "interests": [
+    {
+      "keyword": "art show",
+      "category": "art",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "art exhibition",
+      "category": "art",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "gallery",
+      "category": "art",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "maker space",
+      "category": "maker",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "makerspace",
+      "category": "maker",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "woodworking",
+      "category": "maker",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "craft workshop",
+      "category": "maker",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "live music",
+      "category": "music",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "local band",
+      "category": "music",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "jazz",
+      "category": "music",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "independent film",
+      "category": "film",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "indie film",
+      "category": "film",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "film screening",
+      "category": "film",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "book club",
+      "category": "books",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "gardening club",
+      "category": "gardening",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "community garden",
+      "category": "gardening",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "kettlebell",
+      "category": "fitness",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "salsa",
+      "category": "dance",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "salsa dancing",
+      "category": "dance",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "comedy show",
+      "category": "comedy",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "stand-up comedy",
+      "category": "comedy",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "open mic comedy",
+      "category": "comedy",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "board game night",
+      "category": "sports_games",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "trivia night",
+      "category": "sports_games",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "pickup sports",
+      "category": "sports_games",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "natural building",
+      "category": "natural_building",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "cob building",
+      "category": "natural_building",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "earthbag",
+      "category": "natural_building",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "networking event",
+      "category": "networking",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "real estate networking",
+      "category": "networking",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "professional mixer",
+      "category": "networking",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "meetup",
+      "category": "other",
+      "weight": 0.6,
+      "active": true
+    }
+  ],
+  "sources": [
+    {
+      "name": "example-venue-ical",
+      "type": "ical",
+      "url": "https://example.org/events/?ical=1",
+      "enabled": false,
+      "notes": "Placeholder. Many Houston venues/galleries/makerspaces run the WordPress 'The Events Calendar' plugin, which publishes a free iCal feed at <site>/events/?ical=1 with no API key required. Find a real one and point this at it, or add your own via `events source add`."
+    },
+    {
+      "name": "example-instagram-lead",
+      "type": "lead",
+      "url": "https://instagram.com/example_venue",
+      "enabled": false,
+      "notes": "Placeholder 'lead' source: a known account/page worth checking manually. No automated adapter exists for Instagram/Facebook (would need Meta Graph API credentials) \u2014 this just keeps it on your coverage radar as a source to check by hand, distinct from an automated feed."
+    }
+  ]
+}

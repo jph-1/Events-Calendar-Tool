@@ -505,6 +505,7 @@ def cmd_places_import(args: argparse.Namespace) -> int:
                 lat=rp.lat,
                 lon=rp.lon,
                 tags=rp.tags,
+                url=rp.url,
                 list_name=args.name,
                 source=file_format,
                 imported_at=now,
@@ -523,7 +524,10 @@ def cmd_places_list(args: argparse.Namespace) -> int:
         return 0
     for row in rows:
         coords = f" ({row['lat']}, {row['lon']})" if row["lat"] is not None else ""
-        print(f"  [{row['list_name']}] {row['name']}{coords} — {row['address']}")
+        tags = f" [{row['tags']}]" if row["tags"] else ""
+        print(f"  [{row['list_name']}] {row['name']}{coords} — {row['address']}{tags}")
+        if row["url"]:
+            print(f"      {row['url']}")
     return 0
 
 

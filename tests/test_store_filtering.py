@@ -192,6 +192,7 @@ def test_places_insert_and_list(store):
             lat=29.75,
             lon=-95.37,
             tags="music",
+            url="https://continentalclub.example",
             list_name="Favorites",
             source="csv",
             imported_at="2026-08-02T00:00:00",
@@ -200,5 +201,6 @@ def test_places_insert_and_list(store):
     rows = store.places()
     assert len(rows) == 1
     assert rows[0]["name"] == "Continental Club"
+    assert rows[0]["url"] == "https://continentalclub.example"
     assert store.places(list_name="Favorites") == rows
     assert store.places(list_name="Nonexistent") == []
