@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS places (
     lat REAL,
     lon REAL,
     tags TEXT NOT NULL DEFAULT '',
+    url TEXT NOT NULL DEFAULT '',
     list_name TEXT NOT NULL DEFAULT '',
     source TEXT NOT NULL DEFAULT '',
     imported_at TEXT NOT NULL

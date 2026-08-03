@@ -153,10 +153,20 @@ class EventStore:
     def insert_place(self, place: Place) -> int:
         cur = self.conn.execute(
             """
-            INSERT INTO places (name, address, lat, lon, tags, list_name, source, imported_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO places (name, address, lat, lon, tags, url, list_name, source, imported_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (place.name, place.address, place.lat, place.lon, place.tags, place.list_name, place.source, place.imported_at),
+            (
+                place.name,
+                place.address,
+                place.lat,
+                place.lon,
+                place.tags,
+                place.url,
+                place.list_name,
+                place.source,
+                place.imported_at,
+            ),
         )
         self.conn.commit()
         return cur.lastrowid

@@ -146,3 +146,4 @@ class Place:
     list_name: str
     source: str
     imported_at: str
+    url: str = ""

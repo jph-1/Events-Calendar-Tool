@@ -12,10 +12,19 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 
 _KML_NS = {"kml": "http://www.opengis.net/kml/2.2"}
+
+# Column name aliases seen across different "export my Google Maps saved
+# places" tools, so a CSV doesn't have to be reshaped by hand before import.
+_LAT_KEYS = ("lat", "latitude")
+_LON_KEYS = ("lon", "lng", "longitude")
+_URL_KEYS = ("url", "website", "google_maps_url", "maps_url")
+_ACTIVE_KEYS = ("is_active", "active")
+_FALSY = {"false", "0", "no", "n", ""}
 
 
 @dataclass
@@ -25,6 +34,7 @@ class RawPlace:
     lat: float | None = None
     lon: float | None = None
     tags: str = ""
+    url: str = ""
 
 
 def _find_first(elem: ET.Element, tag: str):
@@ -71,31 +81,69 @@ def parse_kml(text: str) -> list[RawPlace]:
     return places
 
 
+def _row_lookup(row: dict) -> dict:
+    """Case-insensitive header access, since export tools vary (Lat vs lat vs Latitude)."""
+    return {k.strip().lower(): v for k, v in row.items() if k}
+
+
+def _first_present(lookup: dict, keys: tuple[str, ...]) -> str:
+    for key in keys:
+        value = (lookup.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _parse_float(raw: str) -> float | None:
+    try:
+        return float(raw) if raw else None
+    except ValueError:
+        return None
+
+
+def _types_to_tags(raw: str) -> str:
+    """A 'types' column is often a JSON array like '["art_gallery","museum"]'
+    from Google Places-flavored exports — normalize it to our semicolon tag
+    format. Falls back to the raw string as a single tag if it isn't JSON."""
+    if not raw:
+        return ""
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, list):
+            return ";".join(str(t) for t in parsed if t)
+    except (ValueError, TypeError):
+        pass
+    return raw
+
+
 def parse_csv(text: str) -> list[RawPlace]:
-    """Expected columns (any subset, any order): name, address, lat, lon, tags."""
+    """Expected columns (any subset, any order, case-insensitive):
+    name, address, lat/latitude, lon/longitude, tags (or types, as a JSON
+    list or a plain string), url (or website/google_maps_url). A
+    is_active/active column, if present, is honored — rows explicitly
+    marked inactive are skipped."""
     reader = csv.DictReader(io.StringIO(text))
     places: list[RawPlace] = []
     for row in reader:
-        name = (row.get("name") or "").strip()
+        lookup = _row_lookup(row)
+        name = (lookup.get("name") or "").strip()
         if not name:
             continue
-        lat_raw = (row.get("lat") or "").strip()
-        lon_raw = (row.get("lon") or "").strip()
-        try:
-            lat = float(lat_raw) if lat_raw else None
-        except ValueError:
-            lat = None
-        try:
-            lon = float(lon_raw) if lon_raw else None
-        except ValueError:
-            lon = None
+
+        active_raw = _first_present(lookup, _ACTIVE_KEYS)
+        if active_raw and active_raw.strip().lower() in _FALSY:
+            continue
+
+        tags = (lookup.get("tags") or "").strip() or _types_to_tags((lookup.get("types") or "").strip())
+
         places.append(
             RawPlace(
                 name=name,
-                address=(row.get("address") or "").strip(),
-                lat=lat,
-                lon=lon,
-                tags=(row.get("tags") or "").strip(),
+                address=(lookup.get("address") or "").strip(),
+                lat=_parse_float(_first_present(lookup, _LAT_KEYS)),
+                lon=_parse_float(_first_present(lookup, _LON_KEYS)),
+                tags=tags,
+                url=_first_present(lookup, _URL_KEYS),
             )
         )
     return places
