@@ -9,3 +9,9 @@ __pycache__/
 # mechanism for a private personal repo. Swap this for a real hosted DB if
 # this ever moves off a single private repo.
 data/*.db-journal
+
+# Regenerable export artifacts (like a roundup file) — derived from
+# events.db on demand, not a source of truth, so not worth tracking.
+data/snapshot.json
+data/*roundup*
+data/ingest.log
