@@ -450,6 +450,7 @@ def cmd_coverage(args: argparse.Namespace) -> int:
     store = _get_store()
     counts = store.category_counts()
     automated_counts = store.category_counts(verification="automated-source")
+    researched_counts = store.category_counts(verification="assistant-researched")
     last_runs = store.last_ingestion_by_source()
     has_enabled_automated_source = any(s.enabled and s.type in ("ical", "rss") for s in profile.sources)
 
@@ -472,6 +473,7 @@ def cmd_coverage(args: argparse.Namespace) -> int:
     for category in CATEGORIES:
         n = counts.get(category, 0)
         n_automated = automated_counts.get(category, 0)
+        n_researched = researched_counts.get(category, 0)
         has_interest = any(i.category == category and i.active for i in profile.interests)
         if not has_interest and n == 0:
             continue
@@ -479,6 +481,8 @@ def cmd_coverage(args: argparse.Namespace) -> int:
             coverage = f"automated coverage confirmed ({n_automated} event(s) seen from a real feed)"
         elif has_enabled_automated_source:
             coverage = "an automated source is enabled, but hasn't surfaced any events in this category yet"
+        elif n_researched > 0:
+            coverage = f"assistant-researched ({n_researched} event(s) from a one-off web search, unverified — review before relying on them)"
         elif n > 0:
             coverage = "reference-only (from manual/newsletter entries, no live source)"
         else:
@@ -552,6 +556,7 @@ def cmd_export_snapshot(args: argparse.Namespace) -> int:
 
     counts = store.category_counts()
     automated_counts = store.category_counts(verification="automated-source")
+    researched_counts = store.category_counts(verification="assistant-researched")
     last_runs = store.last_ingestion_by_source()
     has_enabled_automated_source = any(s.enabled and s.type in ("ical", "rss") for s in profile.sources)
 
@@ -559,6 +564,7 @@ def cmd_export_snapshot(args: argparse.Namespace) -> int:
     for category in CATEGORIES:
         n = counts.get(category, 0)
         n_automated = automated_counts.get(category, 0)
+        n_researched = researched_counts.get(category, 0)
         has_interest = any(i.category == category and i.active for i in profile.interests)
         if not has_interest and n == 0:
             continue
@@ -566,6 +572,8 @@ def cmd_export_snapshot(args: argparse.Namespace) -> int:
             coverage = "automated"
         elif has_enabled_automated_source:
             coverage = "automated-source-enabled-no-hits"
+        elif n_researched > 0:
+            coverage = "assistant-researched"
         elif n > 0:
             coverage = "reference-only"
         else:

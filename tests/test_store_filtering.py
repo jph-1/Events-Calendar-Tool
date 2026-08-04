@@ -181,6 +181,31 @@ def test_category_counts_filtered_by_verification(store):
     assert automated_counts["art"] == 1
 
 
+def test_category_counts_distinguishes_assistant_researched_from_manual(store):
+    store.insert_candidate(
+        _candidate("Comedy Showcase", "2026-08-08T19:00:00"),
+        "comedy",
+        "Houston",
+        "TX",
+        status="candidate",
+        verification="assistant-researched",
+    )
+    store.insert_candidate(
+        _candidate("Book Club", "2026-08-09T18:00:00"),
+        "books",
+        "Houston",
+        "TX",
+        status="confirmed",
+        verification="user-manual",
+    )
+    researched_counts = store.category_counts(verification="assistant-researched")
+    manual_counts = store.category_counts(verification="user-manual")
+    assert researched_counts.get("comedy") == 1
+    assert researched_counts.get("books") is None
+    assert manual_counts.get("books") == 1
+    assert manual_counts.get("comedy") is None
+
+
 def test_places_insert_and_list(store):
     from events_tool.models import Place
 

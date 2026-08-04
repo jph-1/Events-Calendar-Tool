@@ -32,6 +32,11 @@ VERIFICATIONS = [
     "user-manual",        # typed in directly (add-event / log-attended)
     "user-lead-structured",  # newsletter text, extracted via the LLM-prompt path
     "user-lead-heuristic",   # newsletter text, extracted via the regex fallback
+    "assistant-researched",  # a single live web-search lookup an assistant ran on the
+                              # user's behalf (e.g. "what's on at <saved place> this week").
+                              # Not from a repeatable adapter and not independently
+                              # verified — always inserted as status=candidate with a
+                              # source URL, never auto-confirmed.
 ]
 
 VALID_STATUSES = {"candidate", "confirmed", "attended", "rejected"}

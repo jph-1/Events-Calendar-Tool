@@ -213,6 +213,7 @@
   .cov-dot.automated { background: var(--bayou); }
   .cov-dot.partial { background: var(--marigold); }
   .cov-dot.reference { background: var(--mist); }
+  .cov-dot.researched { background: var(--clay); }
   .cov-dot.none { border: 1.5px dashed var(--mist); background: transparent; }
 
   .disclosure {
@@ -602,6 +603,7 @@ function buildCoverageList() {
     let label = "no coverage";
     if (c.coverage === "automated") { dotClass = "automated"; label = `${c.count} from a live feed`; }
     else if (c.coverage === "automated-source-enabled-no-hits") { dotClass = "partial"; label = "source enabled, no hits yet"; }
+    else if (c.coverage === "assistant-researched") { dotClass = "researched"; label = `${c.count} from web search, unverified`; }
     else if (c.coverage === "reference-only") { dotClass = "reference"; label = `${c.count} from manual/newsletter`; }
     const row = document.createElement("div");
     row.className = "coverage-row";
@@ -752,7 +754,7 @@ function renderAgenda() {
       const row = document.createElement("button");
       row.className = "agenda-row";
       row.type = "button";
-      const verifClass = e.verification === "automated-source" ? "automated" : (e.verification.startsWith("user-lead") ? "lead" : "");
+      const verifClass = e.verification === "automated-source" ? "automated" : (e.verification.startsWith("user-lead") || e.verification === "assistant-researched" ? "lead" : "");
       const venue = [e.location_name, e.neighborhood].filter(Boolean).join(" · ");
       row.innerHTML = `
         <div class="agenda-time mono">${fmtTime(d)}</div>
@@ -772,7 +774,10 @@ function renderAgenda() {
 }
 
 function verifLabel(v) {
-  return { "automated-source": "live feed", "user-manual": "you added", "user-lead-structured": "your lead", "user-lead-heuristic": "your lead" }[v] || v;
+  return {
+    "automated-source": "live feed", "user-manual": "you added", "user-lead-structured": "your lead",
+    "user-lead-heuristic": "your lead", "assistant-researched": "web search",
+  }[v] || v;
 }
 function verifExplain(v) {
   return {
@@ -780,6 +785,7 @@ function verifExplain(v) {
     "user-manual": "You entered this event yourself, or logged it as attended.",
     "user-lead-structured": "Extracted from newsletter text you pasted, via an LLM-assisted read-through you initiated. Not independently verified.",
     "user-lead-heuristic": "Extracted from newsletter text you pasted, via a regex-only fallback (no LLM). Lowest-confidence — please double check.",
+    "assistant-researched": "Found via a single live web search, not a repeatable feed. Not independently verified — check the source link before relying on the date/time.",
   }[v] || v;
 }
 
