@@ -337,6 +337,32 @@ def cmd_review(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_confirm(args: argparse.Namespace) -> int:
+    store = _get_store()
+    row = store.get_by_id(args.event_id)
+    if not row:
+        print(f"error: no event #{args.event_id}", file=sys.stderr)
+        return 1
+    store.update_status(args.event_id, "confirmed")
+    if args.notes:
+        store.set_user_notes(args.event_id, args.notes)
+    print(f"Confirmed #{args.event_id}: {row['title']}")
+    return 0
+
+
+def cmd_reject(args: argparse.Namespace) -> int:
+    store = _get_store()
+    row = store.get_by_id(args.event_id)
+    if not row:
+        print(f"error: no event #{args.event_id}", file=sys.stderr)
+        return 1
+    store.update_status(args.event_id, "rejected")
+    if args.reason:
+        store.set_user_notes(args.event_id, args.reason)
+    print(f"Rejected #{args.event_id}: {row['title']}" + (f" ({args.reason})" if args.reason else ""))
+    return 0
+
+
 def cmd_recategorize(args: argparse.Namespace) -> int:
     store = _get_store()
     row = store.get_by_id(args.event_id)
@@ -766,6 +792,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_review = sub.add_parser("review", help="Interactively confirm/reject pending candidate events.")
     p_review.set_defaults(func=cmd_review)
+
+    p_confirm = sub.add_parser("confirm", help="Confirm a single event (same effect as 'c' in events review, without the walkthrough).")
+    p_confirm.add_argument("event_id", type=int)
+    p_confirm.add_argument("--notes", default=None, help="Optional note to attach (e.g. something you verified).")
+    p_confirm.set_defaults(func=cmd_confirm)
+
+    p_reject = sub.add_parser("reject", help="Reject a single event (same effect as 'r' in events review, without the walkthrough).")
+    p_reject.add_argument("event_id", type=int)
+    p_reject.add_argument("--reason", default=None, help="Optional note on why (e.g. a factual correction you found).")
+    p_reject.set_defaults(func=cmd_reject)
 
     p_recat = sub.add_parser("recategorize", help="Correct an event's category without altering the ingested source fact.")
     p_recat.add_argument("event_id", type=int)
