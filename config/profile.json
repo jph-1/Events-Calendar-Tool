@@ -200,6 +200,18 @@
       "category": "other",
       "weight": 0.6,
       "active": true
+    },
+    {
+      "keyword": "chess club",
+      "category": "sports_games",
+      "weight": 1.0,
+      "active": true
+    },
+    {
+      "keyword": "watch party",
+      "category": "sports_games",
+      "weight": 1.0,
+      "active": true
     }
   ],
   "sources": [
