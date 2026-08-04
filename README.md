@@ -350,6 +350,23 @@ are tracked in git — that's the durability mechanism for a private personal
 repo today. If this tool ever moves to a shared or public repo, swap that
 for a real hosted database instead of committing the DB file.
 
+**On network access inside this Claude Code sandbox:** this environment's
+egress policy blocks direct HTTPS fetches to arbitrary hosts outright —
+confirmed against `example.com`, not just specific venue sites. Since
+`events ingest`'s RSS/iCal adapter uses `urllib.request` for exactly that
+kind of direct fetch, running it from *inside this sandbox* against a real
+venue's feed will fail the same way (logged as an `error` status in
+`events coverage`, not a silent no-op — the adapter's error handling
+already surfaces this). This is a property of this specific sandboxed
+session, not a bug in the adapter: the same code fetches real feeds fine
+on a normal machine, VPS, or CI runner with ordinary internet access — it's
+only this environment's network policy that's restrictive. The weekly
+Claude Code Routine will hit the same wall for any real source configured
+while it keeps running inside this sandbox; `discover-prompt`/
+`discover-import` are unaffected since web search runs through a separate
+managed service, not this sandbox's network policy — which is why that's
+been the productive path for real events during this session.
+
 ## Future scope (not built, on purpose)
 
 These are real product directions, deliberately deferred rather than
