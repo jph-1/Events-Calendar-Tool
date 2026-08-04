@@ -15,6 +15,7 @@ from events_tool import config as config_mod
 from events_tool import db as db_mod
 from events_tool import places as places_mod
 from events_tool.digest import render_coverage_text, render_html, render_markdown
+from events_tool.discovery import build_discovery_prompt, parse_discovery_response
 from events_tool.ics_export import build_calendar
 from events_tool.ingestion.ics_rss_adapter import IcsRssAdapter
 from events_tool.ingestion.manual_adapter import build_candidate
@@ -217,6 +218,56 @@ def cmd_ingest_text(args: argparse.Namespace) -> int:
     store.log_ingestion_run(IngestionRun(None, source_name, _now_iso(), found, added, deduped, "ok"))
     print(f"{source_name}: {found} extracted, {added} added, {deduped} already known")
     print("Reminder: these are user-provided leads, not independently verified — review before relying on them.")
+    return 0
+
+
+def cmd_discover_prompt(args: argparse.Namespace) -> int:
+    profile = config_mod.load_profile()
+    store = _get_store()
+    places = store.places(list_name=args.places_list)
+    prompt = build_discovery_prompt(
+        profile.interests, places, profile.location.city, profile.location.state, days=args.days
+    )
+    if args.out:
+        Path(args.out).write_text(prompt, encoding="utf-8")
+        print(f"Wrote discovery prompt to {args.out}.")
+        print("Run it with any web-search-capable LLM, save the JSON reply, then: events discover-import --structured <file>")
+    else:
+        print(prompt)
+    return 0
+
+
+def cmd_discover_import(args: argparse.Namespace) -> int:
+    profile = config_mod.load_profile()
+    store = _get_store()
+    json_text = Path(args.structured).read_text(encoding="utf-8")
+    results, warnings = parse_discovery_response(json_text, source_name=args.source_name)
+
+    added = deduped = 0
+    for candidate, category in results:
+        _, was_new = store.insert_candidate(
+            candidate,
+            category,
+            profile.location.city,
+            profile.location.state,
+            status="candidate",  # discover results always need review — no auto-confirm
+            verification="assistant-researched",
+        )
+        if was_new:
+            added += 1
+        else:
+            deduped += 1
+
+    found = len(results) + len(warnings)
+    store.log_ingestion_run(
+        IngestionRun(None, args.source_name, _now_iso(), found, added, deduped, "ok", notes="; ".join(warnings))
+    )
+    print(f"{args.source_name}: {found} found, {added} added as candidates, {deduped} already known")
+    if warnings:
+        print(f"{len(warnings)} entries skipped:")
+        for w in warnings:
+            print(f"  - {w}")
+    print("All of these need review (`events review`) before they count as confirmed — none are auto-confirmed.")
     return 0
 
 
@@ -675,6 +726,23 @@ def build_parser() -> argparse.ArgumentParser:
     p_ingest_text.add_argument("--file", help="Newsletter text file (required with --heuristic).")
     p_ingest_text.add_argument("--auto-confirm", action="store_true")
     p_ingest_text.set_defaults(func=cmd_ingest_text)
+
+    p_discover_prompt = sub.add_parser(
+        "discover-prompt",
+        help="Render a research brief (your saved places + active interests) for a web-search-capable LLM to fill in.",
+    )
+    p_discover_prompt.add_argument("--days", type=int, default=7)
+    p_discover_prompt.add_argument("--places-list", dest="places_list", default=None, help="Limit to one imported places list by name.")
+    p_discover_prompt.add_argument("--out", default=None)
+    p_discover_prompt.set_defaults(func=cmd_discover_prompt)
+
+    p_discover_import = sub.add_parser(
+        "discover-import",
+        help="Import a discover-prompt LLM reply. Always lands as review candidates (no auto-confirm) since these are unverified web-search results.",
+    )
+    p_discover_import.add_argument("--structured", required=True)
+    p_discover_import.add_argument("--source-name", dest="source_name", default="discover", help="Label for this run in the ingestion log.")
+    p_discover_import.set_defaults(func=cmd_discover_import)
 
     p_add_event = sub.add_parser("add-event", help="Manually add an event you already know about.")
     p_add_event.add_argument("--title", required=True)

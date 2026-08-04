@@ -191,6 +191,35 @@ that match an active interest keyword. Always review these afterward —
 both paths are tagged `user-lead-*` in `events coverage`, never presented
 as independently verified.
 
+## Organic discovery: "go find events for me"
+
+Same two-step, prompt/structured-import shape as newsletter ingestion, but
+scoped to your saved places (`events places import`) and active interests
+instead of a specific text you pasted — this is how you get events without
+already knowing where to look:
+
+```bash
+events discover-prompt --days 7 --out prompt.txt
+# run prompt.txt through any web-search-capable LLM, save its JSON reply
+events discover-import --structured response.json
+```
+
+The prompt asks the LLM to check your saved places for scheduled events
+*and* run general searches for your active interests not tied to any
+specific venue, but to only report an event if it found a concrete date
+and a real source URL — never to infer a date from "runs every Tuesday"
+unless that exact upcoming occurrence is stated directly on a page.
+
+This source type (`assistant-researched`) carries more fabrication risk
+than a newsletter you chose to paste, since the LLM is searching the open
+web rather than reading text you selected — so `discover-import` holds a
+stricter line than `ingest-text`: **every event must include a source
+URL** (entries without one are dropped with a warning, not silently kept),
+and there is no `--auto-confirm` option at all. Everything lands as a
+review candidate. `events coverage` and the calendar prototype both label
+these distinctly from manual/newsletter entries, not lumped in as
+equally-trusted "reference" data.
+
 ## Logging something you already attended or already know about
 
 ```bash
