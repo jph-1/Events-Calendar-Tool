@@ -44,7 +44,13 @@ makerspaces, bars/clubs with events, gardens with programming, etc.:
 {places_lines}
 
 Also run general/organic searches in {city} for these interest areas, not \
-tied to any specific venue above:
+tied to any specific venue above. For these, prioritize checking Meetup.com \
+and Eventbrite.com group/event listing pages first — they usually give a \
+specific dated occurrence (or an explicit list of dates, e.g. "08/05, \
+08/12, 08/19" — using one of those listed dates is fine, that's a stated \
+date, not an inferred one). Generic "best salsa nights in {city}" blog or \
+listicle pages are usually too vague to confirm a specific date from and \
+should be a last resort:
 
 {interest_lines}
 
