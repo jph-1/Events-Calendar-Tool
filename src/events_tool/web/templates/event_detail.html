@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }}{% endblock %}
+{% block content %}
+{% set c = cat_color(event.category) %}
+<a href="javascript:history.back()" class="btn btn-small" style="margin-bottom:16px;">‹ back</a>
+
+<div class="card">
+  <h3 style="font-size:19px;">{{ '★ ' if event.saved }}{{ event.title }}</h3>
+  <div class="mono" style="font-size:13.5px;color:var(--ink-soft);margin-bottom:10px;">
+    {{ event.start_dt }}{% if event.end_dt %} – {{ event.end_dt }}{% endif %}
+  </div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+    <span class="chip" style="color:{{ c.text }};background:{{ c.bg }}">{{ event.category.replace('_',' ') }}</span>
+    <span class="verif-badge {{ 'automated' if event.verification == 'automated-source' else ('lead' if 'lead' in event.verification or event.verification == 'assistant-researched' else '') }}">{{ event.verification }}</span>
+    <span class="chip" style="background:var(--paper);border:1px solid var(--line);">{{ event.status }}</span>
+  </div>
+
+  {% if event.user_category %}
+    <p style="font-size:13px;color:var(--mist);">Recategorized from <strong>{{ event.source_category.replace('_',' ') }}</strong> (original source fact, kept for reference).</p>
+  {% endif %}
+
+  {% if event.location_name or event.address %}
+    <div class="field"><label>Where</label>{{ event.location_name }}{% if event.address %}, {{ event.address }}{% endif %}{% if event.neighborhood %} ({{ event.neighborhood }}){% endif %}</div>
+  {% endif %}
+
+  {% if event.description %}
+    <div class="field"><label>Description</label>{{ event.description }}</div>
+  {% endif %}
+
+  {% if event.url %}
+    <div class="field"><label>Source link</label><a href="{{ event.url }}" target="_blank" rel="noopener noreferrer">{{ event.url }}</a></div>
+  {% endif %}
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
+    {% if event.saved %}
+      <form class="inline-form" method="post" action="{{ url_for('calendar.unsave_event', event_id=event.id) }}"><button class="btn">☆ Unsave</button></form>
+    {% else %}
+      <form class="inline-form" method="post" action="{{ url_for('calendar.save_event', event_id=event.id) }}"><button class="btn">★ Save</button></form>
+    {% endif %}
+
+    {% if event.status == 'attended' %}
+      <form class="inline-form" method="post" action="{{ url_for('calendar.unattend_event', event_id=event.id) }}"><button class="btn">Undo attended</button></form>
+    {% else %}
+      <form class="inline-form" method="post" action="{{ url_for('calendar.attend_event', event_id=event.id) }}"><button class="btn">Mark attended</button></form>
+    {% endif %}
+  </div>
+
+  <form method="post" action="{{ url_for('calendar.recategorize_event', event_id=event.id) }}" style="margin-top:18px;display:flex;gap:8px;align-items:end;">
+    <div class="field" style="flex:1;margin-bottom:0;">
+      <label>Correct category</label>
+      <select name="category">
+        {% for cat in categories %}
+          <option value="{{ cat }}" {{ 'selected' if event.category == cat else '' }}>{{ cat.replace('_',' ') }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn" type="submit">Save</button>
+  </form>
+
+  <form method="post" action="{{ url_for('calendar.set_notes', event_id=event.id) }}" style="margin-top:14px;">
+    <div class="field">
+      <label>Your notes</label>
+      <textarea name="notes" rows="3">{{ event.user_notes }}</textarea>
+    </div>
+    <button class="btn" type="submit">Save notes</button>
+  </form>
+</div>
+{% endblock %}

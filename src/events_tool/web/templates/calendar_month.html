@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ month_name }}{% endblock %}
+{% block content %}
+<h2>{{ month_name }}</h2>
+
+<div class="filter-bar">
+  {% for cat in categories %}
+    {% set c = cat_color(cat) %}
+    {% set qs = request.args.getlist('category') %}
+    {% if cat in active_categories %}
+      {% set new_cats = qs | reject('equalto', cat) | list %}
+    {% else %}
+      {% set new_cats = qs + [cat] %}
+    {% endif %}
+    <a class="filter-chip {{ 'active' if cat in active_categories else '' }}"
+       style="{{ 'background:' ~ c.text ~ ';border-color:' ~ c.text ~ ';color:#fff;' if cat in active_categories else '' }}"
+       href="{{ url_for('calendar.month_view', year=today_year if request.args.get('year') is none else request.args.get('year'), month=request.args.get('month'), category=new_cats, saved=('1' if saved_only else none)) }}">
+      {{ cat.replace('_',' ') }}{% if category_counts.get(cat) %} ({{ category_counts.get(cat) }}){% endif %}
+    </a>
+  {% endfor %}
+  <a class="filter-chip {{ 'active' if saved_only else '' }}"
+     href="{{ url_for('calendar.month_view', year=request.args.get('year'), month=request.args.get('month'), category=request.args.getlist('category'), saved=(none if saved_only else '1')) }}">
+    ★ saved only
+  </a>
+</div>
+
+<div class="month-nav">
+  <div class="controls">
+    <a class="btn btn-small" href="{{ url_for('calendar.month_view', year=prev_year, month=prev_month, category=request.args.getlist('category'), saved=('1' if saved_only else none)) }}">‹ prev</a>
+    <a class="btn btn-small" href="{{ url_for('calendar.month_view', year=today_year, month=today_month) }}">today</a>
+    <a class="btn btn-small" href="{{ url_for('calendar.month_view', year=next_year, month=next_month, category=request.args.getlist('category'), saved=('1' if saved_only else none)) }}">next ›</a>
+  </div>
+</div>
+
+<div class="weekday-row">
+  <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+</div>
+<div class="month-grid">
+  {% for week in weeks %}
+    {% for day in week %}
+      <div class="day-cell {{ 'outside' if not day.in_month else '' }} {{ 'today' if day.is_today else '' }}">
+        <div class="day-num">{{ day.date.day }}</div>
+        {% for ev in day.events[:3] %}
+          {% set c = cat_color(ev.category) %}
+          <a class="pill" style="color:{{ c.text }};background:{{ c.bg }}" href="{{ url_for('calendar.event_detail', event_id=ev.id) }}">
+            {% if ev.saved %}★ {% endif %}{{ ev.title }}
+          </a>
+        {% endfor %}
+        {% if day.events|length > 3 %}
+          <div style="font-size:10px;color:var(--mist);font-weight:700;">+{{ day.events|length - 3 }} more</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content_unauth %}
+<div class="login-shell">
+  <div class="login-card">
+    <h1><span style="color:var(--marigold)">Houston</span> Activities</h1>
+    {% if no_account %}
+      <p class="sub">No account exists yet. Create one from the command line:</p>
+      <div class="card mono" style="font-size:12.5px;">events web create-user</div>
+    {% else %}
+      <p class="sub">Sign in to your calendar.</p>
+      {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+      <form method="post">
+        <div class="field">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" autocomplete="username" required autofocus>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Sign in</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

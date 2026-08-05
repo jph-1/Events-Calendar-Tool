@@ -6,6 +6,7 @@ to see the full command surface. See README.md for a walkthrough.
 from __future__ import annotations
 
 import argparse
+import getpass
 import json
 import sys
 from datetime import datetime
@@ -1006,7 +1007,77 @@ def build_parser() -> argparse.ArgumentParser:
     p_export.add_argument("--all", action="store_true", help="Include candidate/rejected events too (default: confirmed+attended only).")
     p_export.set_defaults(func=cmd_export_ics)
 
+    p_web = sub.add_parser("web", help="Manage/run the Phase 2 web app.")
+    web_sub = p_web.add_subparsers(dest="web_action", required=True)
+
+    p_web_create_user = web_sub.add_parser("create-user", help="Create the single local account (one-time setup).")
+    p_web_create_user.add_argument("--username", required=True)
+    p_web_create_user.set_defaults(func=cmd_web_create_user)
+
+    p_web_set_password = web_sub.add_parser("set-password", help="Change the account password.")
+    p_web_set_password.set_defaults(func=cmd_web_set_password)
+
+    p_web_run = web_sub.add_parser("run", help="Run the Flask dev server.")
+    p_web_run.add_argument("--host", default="127.0.0.1")
+    p_web_run.add_argument("--port", type=int, default=5000)
+    p_web_run.add_argument("--debug", action="store_true")
+    p_web_run.set_defaults(func=cmd_web_run)
+
     return parser
+
+
+def cmd_web_create_user(args: argparse.Namespace) -> int:
+    from events_tool.users import create_user
+
+    store = _get_store()
+    password = getpass.getpass("Password: ")
+    confirm = getpass.getpass("Confirm password: ")
+    if password != confirm:
+        print("error: passwords did not match", file=sys.stderr)
+        return 1
+    if len(password) < 8:
+        print("error: password must be at least 8 characters", file=sys.stderr)
+        return 1
+    try:
+        create_user(store.conn, args.username, password)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(f"Created account for {args.username}. Run `events web run` to start the app.")
+    return 0
+
+
+def cmd_web_set_password(args: argparse.Namespace) -> int:
+    from events_tool.users import get_user, set_password, verify_password
+
+    store = _get_store()
+    user = get_user(store.conn)
+    if user is None:
+        print("error: no account exists yet — run `events web create-user` first", file=sys.stderr)
+        return 1
+    current = getpass.getpass("Current password: ")
+    if not verify_password(user, current):
+        print("error: incorrect current password", file=sys.stderr)
+        return 1
+    new_password = getpass.getpass("New password: ")
+    confirm = getpass.getpass("Confirm new password: ")
+    if new_password != confirm:
+        print("error: passwords did not match", file=sys.stderr)
+        return 1
+    if len(new_password) < 8:
+        print("error: password must be at least 8 characters", file=sys.stderr)
+        return 1
+    set_password(store.conn, user.id, new_password)
+    print("Password updated.")
+    return 0
+
+
+def cmd_web_run(args: argparse.Namespace) -> int:
+    from events_tool.web import create_app
+
+    app = create_app()
+    app.run(host=args.host, port=args.port, debug=args.debug)
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:

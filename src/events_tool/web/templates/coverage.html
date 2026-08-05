@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Coverage{% endblock %}
+{% block content %}
+<h2>Coverage — {{ location.city }}, {{ location.state }}</h2>
+
+<h3 style="font-size:14px;">Sources</h3>
+<div class="table-wrap">
+<table>
+  <tr><th>Name</th><th>Type</th><th>Status</th><th>Last run</th></tr>
+  {% for s in sources %}
+    <tr>
+      <td>{{ s.name }}</td>
+      <td>{{ s.type }}</td>
+      <td>{{ s.kind }}</td>
+      <td>{{ s.last_run or 'never run' }}{% if s.last_status %} ({{ s.last_status }}){% endif %}</td>
+    </tr>
+  {% endfor %}
+</table>
+</div>
+
+<h3 style="font-size:14px;margin-top:24px;">Categories</h3>
+{% for c in categories %}
+  <div class="card" style="display:flex;align-items:center;gap:10px;padding:10px 14px;">
+    <span class="cov-dot {{ c.state }}"></span>
+    <strong style="min-width:140px;text-transform:capitalize;">{{ c.category.replace('_',' ') }}</strong>
+    <span style="color:var(--mist);font-size:13px;">{{ c.count }} event(s) — {{ c.label }}</span>
+  </div>
+{% endfor %}
+{% endblock %}

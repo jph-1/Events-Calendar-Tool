@@ -83,6 +83,14 @@ CREATE TABLE IF NOT EXISTS places (
 );
 
 CREATE INDEX IF NOT EXISTS idx_places_list_name ON places(list_name);
+
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    ics_token TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL
+);
 """
 
 

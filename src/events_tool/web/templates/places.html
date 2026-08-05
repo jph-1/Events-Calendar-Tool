@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Places{% endblock %}
+{% block content %}
+<h2>Your places</h2>
+
+<div class="card">
+  <h3>Import a list</h3>
+  <p style="font-size:13px;color:var(--mist);">KML (Google My Maps export) or CSV. Google Maps share links can't be fetched directly — export the file yourself.</p>
+  <form method="post" action="{{ url_for('places.import_places') }}" enctype="multipart/form-data" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;">
+    <div class="field" style="margin-bottom:0;">
+      <label>List name</label>
+      <input type="text" name="list_name" placeholder="Favorite Galleries" required>
+    </div>
+    <div class="field" style="margin-bottom:0;">
+      <label>File</label>
+      <input type="file" name="file" accept=".kml,.csv" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Import</button>
+  </form>
+</div>
+
+<div class="filter-bar">
+  <a class="filter-chip {{ 'active' if not active_list else '' }}" href="{{ url_for('places.places_list') }}">All</a>
+  {% for name in list_names %}
+    <a class="filter-chip {{ 'active' if active_list == name else '' }}" href="{{ url_for('places.places_list', list=name) }}">{{ name }}</a>
+  {% endfor %}
+</div>
+
+{% if not places %}
+  <div class="empty-state">No places imported yet.</div>
+{% endif %}
+
+<div class="table-wrap">
+<table>
+  <tr><th>Name</th><th>List</th><th>Address</th><th>Tags</th></tr>
+  {% for p in places %}
+    <tr>
+      <td>{% if p.url %}<a href="{{ p.url }}" target="_blank" rel="noopener noreferrer">{{ p.name }}</a>{% else %}{{ p.name }}{% endif %}</td>
+      <td>{{ p.list_name }}</td>
+      <td>{{ p.address }}</td>
+      <td>{{ p.tags }}</td>
+    </tr>
+  {% endfor %}
+</table>
+</div>
+{% endblock %}

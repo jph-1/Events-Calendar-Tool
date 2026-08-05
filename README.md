@@ -18,20 +18,63 @@ standard library (no `pip install` needed to use it).
 
 ## Where this is in its build
 
-This is being built in two phases, by design:
+Built in two phases, by design:
 
-- **Phase 1 (this repo, today)**: the engine — data model, ingestion,
+- **Phase 1 (CLI + static prototype)**: the engine — data model, ingestion,
   matching, dedup, personal signals, coverage transparency — plus a CLI and
-  a static, read-only HTML calendar prototype (month/agenda views) you
-  regenerate on demand. Sign-in is a single local account; there's no
-  live server.
-- **Phase 2 (planned next)**: a local Flask web app on top of the same
-  engine — real session-based sign-in, an interactive calendar (actions
-  like save/attend/recategorize happen in the UI, not just the CLI), and a
-  live `.ics`/webcal subscription endpoint for Google Calendar and friends.
+  a static, read-only HTML calendar prototype you regenerate on demand.
+  Still fully supported; the CLI is what any automation (the weekly
+  Routine, cron) drives under the hood.
+- **Phase 2 (`events_tool.web`, this repo, today)**: a Flask web app on
+  top of the exact same engine — real session-based sign-in (a single
+  local account), an interactive calendar where save/attend/recategorize
+  happen as real form actions (not just CLI commands), an ask/search page
+  with a live-search fallback, and a live `.ics`/webcal subscription
+  endpoint for Google Calendar and friends. See "Web app" below for setup.
 
-Everything below that says "for now, use the CLI command X" is a Phase 1
-limitation that Phase 2 is expected to remove.
+Anywhere below that still says "for now, use the CLI" is describing a
+CLI-only path that the web app has since covered with a page — both stay
+supported; the web app doesn't replace the CLI, it's a UI layer on the
+same store/config/discover/ask modules.
+
+## Web app
+
+```bash
+pip install -r requirements.txt      # installs Flask
+export PYTHONPATH=src
+events web create-user --username you   # one-time; prompts for a password (never touches git)
+events web run                          # http://127.0.0.1:5000
+# or: scripts/run_web.sh --host 0.0.0.0 --port 8080
+```
+
+Pages: **Calendar** (month grid) and **Agenda** (today/week/30d/90d list),
+both with category and saved-only filters; **Ask/Search** — the same
+local-first, explicit-date-range, live-search-fallback flow as `events
+ask`, but as a form instead of file juggling; **Review** — confirm/reject
+buttons for pending candidates; **Coverage** — the same honest
+automated/researched/reference/none breakdown as `events coverage`;
+**Places** — list + drag-and-drop KML/CSV import; **Settings** —
+interests, sources, and your calendar subscription link.
+
+**Auth**: one local account (`events web create-user`), Werkzeug-hashed
+password, signed-cookie session. Change your password with `events web
+set-password`.
+
+**Calendar subscription**: Settings shows a private `.ics` URL
+(`/calendar/<token>.ics`) — paste it into Google Calendar / Apple
+Calendar's "subscribe by URL." It's token-protected rather than
+session-protected, since calendar apps poll it with no interactive login;
+regenerate the token from Settings if it ever leaks. The session-signing
+secret (`data/flask_secret.key`) is generated locally on first run and,
+unlike `events.db`/`profile.json`, is **not** tracked in git — it's a
+real security secret, not durable state worth persisting that way.
+
+**Deploying for real**: the dev server (`events web run`) is fine for
+trying this locally, but the actual next step from here is real hosting —
+a VPS, a home server, or a PaaS — both because Flask's dev server says so
+itself, and because this sandbox's network policy blocks the outbound
+fetches the RSS/iCal adapter needs (see "Background cadence" below); nothing
+about the app itself is sandbox-specific.
 
 ## Principles this tool holds itself to
 

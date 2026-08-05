@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Ask{% endblock %}
+{% block content %}
+<h2>Ask a question</h2>
+<p style="color:var(--mist);font-size:13.5px;margin-top:-10px;">
+  Checks your calendar first. If nothing's there, you'll get a research prompt to run through
+  any web-search-capable LLM, plus a place to paste the reply back in.
+</p>
+
+<form method="get" action="{{ url_for('ask.ask_view') }}" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:20px;">
+  <div class="field" style="flex:2;min-width:220px;margin-bottom:0;">
+    <label for="text">Question</label>
+    <input type="text" id="text" name="text" value="{{ text }}" placeholder='e.g. &quot;find a chess club in houston&quot;' required>
+  </div>
+  <div class="field" style="margin-bottom:0;">
+    <label for="range">Date range</label>
+    <select id="range" name="range">
+      {% for choice in range_choices %}
+        <option value="{{ choice }}" {{ 'selected' if range_choice == choice else '' }}>
+          {{ {'today': 'Today', 'week': 'This week', '30d': '30 days', '90d': '90 days', 'custom': 'Custom'}[choice] }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  {% if range_choice == 'custom' %}
+  <div class="field" style="margin-bottom:0;">
+    <label for="from">From</label>
+    <input type="datetime-local" id="from" name="from" value="{{ custom_from }}">
+  </div>
+  <div class="field" style="margin-bottom:0;">
+    <label for="to">To</label>
+    <input type="datetime-local" id="to" name="to" value="{{ custom_to }}">
+  </div>
+  {% endif %}
+  <button type="submit" class="btn btn-primary">Ask</button>
+</form>
+
+{% if results %}
+  <h3 style="font-size:15px;">Found {{ results|length }} event(s) for "{{ text }}" within {{ range_label }}:</h3>
+  {% for ev in results %}
+    {% set c = cat_color(ev.category) %}
+    <div class="agenda-row" style="margin-bottom:8px;">
+      <div class="mono" style="font-size:12.5px;font-weight:700;">{{ ev.start_dt[5:16] }}</div>
+      <div>
+        <div class="agenda-title"><a href="{{ url_for('calendar.event_detail', event_id=ev.id) }}">{{ ev.title }}</a></div>
+        <div class="agenda-sub">{{ ev.location_name or 'Venue not listed' }}</div>
+      </div>
+      <span class="chip" style="color:{{ c.text }};background:{{ c.bg }}">{{ ev.category.replace('_',' ') }}</span>
+    </div>
+  {% endfor %}
+{% endif %}
+
+{% if no_local_results %}
+  <div class="flash warning">No matches in your calendar for "{{ text }}" within {{ range_label }}.</div>
+
+  <h3 style="font-size:15px;">1. Run this research prompt through a web-search-capable LLM</h3>
+  <textarea readonly rows="14" onclick="this.select()">{{ prompt }}</textarea>
+
+  <h3 style="font-size:15px;margin-top:20px;">2. Paste its JSON reply here</h3>
+  <form method="post" action="{{ url_for('ask.ask_import') }}">
+    <input type="hidden" name="text" value="{{ text }}">
+    <input type="hidden" name="range" value="{{ range_choice }}">
+    <input type="hidden" name="prompt" value="{{ prompt }}">
+    <div class="field">
+      <textarea name="reply_json" rows="10" placeholder='{"matches": [], "next_occurrence_suggestions": []}' required></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Import results</button>
+  </form>
+{% endif %}
+
+{% if matches_added is defined %}
+  <div class="flash success">{{ matches_added }} match(es) added to your review queue.</div>
+{% endif %}
+
+{% if suggestions %}
+  <h3 style="font-size:15px;">Found outside your requested range — not added automatically:</h3>
+  {% for candidate, category, note in suggestions %}
+    {% set c = cat_color(category) %}
+    <div class="card">
+      <h3>{{ candidate.title }} <span class="chip" style="color:{{ c.text }};background:{{ c.bg }};font-size:11px;">{{ category.replace('_',' ') }}</span></h3>
+      <div class="mono" style="font-size:12.5px;color:var(--ink-soft);">{{ candidate.start_dt }} @ {{ candidate.location_name or '(venue not listed)' }}</div>
+      <p style="font-size:13px;color:var(--mist);">{{ note }}</p>
+      {% if candidate.url %}<p style="font-size:12.5px;"><a href="{{ candidate.url }}" target="_blank" rel="noopener noreferrer">{{ candidate.url }}</a></p>{% endif %}
+      <form method="post" action="{{ url_for('ask.add_suggestion') }}">
+        <input type="hidden" name="title" value="{{ candidate.title }}">
+        <input type="hidden" name="description" value="{{ candidate.description }}">
+        <input type="hidden" name="start_dt" value="{{ candidate.start_dt }}">
+        <input type="hidden" name="end_dt" value="{{ candidate.end_dt or '' }}">
+        <input type="hidden" name="location_name" value="{{ candidate.location_name }}">
+        <input type="hidden" name="address" value="{{ candidate.address }}">
+        <input type="hidden" name="neighborhood" value="{{ candidate.neighborhood }}">
+        <input type="hidden" name="url" value="{{ candidate.url }}">
+        <input type="hidden" name="category" value="{{ category }}">
+        <button type="submit" class="btn btn-primary btn-small">Add to calendar</button>
+      </form>
+    </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}

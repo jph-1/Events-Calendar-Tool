@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Agenda{% endblock %}
+{% block content %}
+<h2>Agenda</h2>
+
+<div class="filter-bar">
+  {% for choice in ['today', 'week', '30d', '90d'] %}
+    <a class="filter-chip {{ 'active' if range_choice == choice else '' }}"
+       href="{{ url_for('calendar.agenda_view', range=choice, category=request.args.getlist('category'), saved=('1' if saved_only else none)) }}">
+      {{ {'today': 'Today', 'week': 'This week', '30d': '30 days', '90d': '90 days'}[choice] }}
+    </a>
+  {% endfor %}
+</div>
+
+<div class="filter-bar">
+  {% for cat in categories %}
+    {% set c = cat_color(cat) %}
+    {% set qs = request.args.getlist('category') %}
+    {% if cat in active_categories %}
+      {% set new_cats = qs | reject('equalto', cat) | list %}
+    {% else %}
+      {% set new_cats = qs + [cat] %}
+    {% endif %}
+    <a class="filter-chip {{ 'active' if cat in active_categories else '' }}"
+       style="{{ 'background:' ~ c.text ~ ';border-color:' ~ c.text ~ ';color:#fff;' if cat in active_categories else '' }}"
+       href="{{ url_for('calendar.agenda_view', range=range_choice, category=new_cats, saved=('1' if saved_only else none)) }}">
+      {{ cat.replace('_',' ') }}
+    </a>
+  {% endfor %}
+  <a class="filter-chip {{ 'active' if saved_only else '' }}"
+     href="{{ url_for('calendar.agenda_view', range=range_choice, category=request.args.getlist('category'), saved=(none if saved_only else '1')) }}">
+    ★ saved only
+  </a>
+</div>
+
+{% if not groups %}
+  <div class="empty-state">No events match these filters.</div>
+{% endif %}
+
+{% for group in groups %}
+  <div class="agenda-group">
+    <div class="agenda-date">{{ group.date }}</div>
+    {% for ev in group.events %}
+      {% set c = cat_color(ev.category) %}
+      <div class="agenda-row">
+        <div class="mono" style="font-size:12.5px;font-weight:700;">{{ ev.start_dt[11:16] }}</div>
+        <div>
+          <div class="agenda-title"><a href="{{ url_for('calendar.event_detail', event_id=ev.id) }}">{{ '★ ' if ev.saved }}{{ ev.title }}</a></div>
+          <div class="agenda-sub">{{ ev.location_name or 'Venue not listed' }}{% if ev.neighborhood %} · {{ ev.neighborhood }}{% endif %}</div>
+        </div>
+        <div>
+          <span class="chip" style="color:{{ c.text }};background:{{ c.bg }}">{{ ev.category.replace('_',' ') }}</span>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endfor %}
+{% endblock %}

@@ -15,3 +15,8 @@ data/*.db-journal
 data/snapshot.json
 data/*roundup*
 data/ingest.log
+
+# Flask session-signing secret. Unlike events.db/profile.json this is a
+# real security secret — leaking it lets someone forge login sessions.
+# Generated locally on first `events web run`; never committed.
+data/flask_secret.key

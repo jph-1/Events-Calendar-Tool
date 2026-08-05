@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Events{% endblock %} — Houston Activities</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+{% if current_user %}
+<div class="app-shell">
+  <nav class="nav">
+    <h1><span class="place">Houston</span> Activities</h1>
+    <div class="nav-links">
+      <a href="{{ url_for('calendar.month_view') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('calendar.month') else '' }}">Calendar</a>
+      <a href="{{ url_for('calendar.agenda_view') }}" class="{{ 'active' if request.endpoint == 'calendar.agenda_view' else '' }}">Agenda</a>
+      <a href="{{ url_for('ask.ask_view') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('ask.') else '' }}">Ask / Search</a>
+      <a href="{{ url_for('review.review_list') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('review.') else '' }}">Review</a>
+      <a href="{{ url_for('coverage.coverage_view') }}" class="{{ 'active' if request.endpoint == 'coverage.coverage_view' else '' }}">Coverage</a>
+      <a href="{{ url_for('places.places_list') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('places.') else '' }}">Places</a>
+      <a href="{{ url_for('settings.settings_view') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('settings.') else '' }}">Settings</a>
+    </div>
+    <div class="nav-footer">
+      Signed in as {{ current_user.username }}
+      <form method="post" action="{{ url_for('auth.logout') }}" style="margin-top:6px;">
+        <button type="submit">Log out</button>
+      </form>
+    </div>
+  </nav>
+  <main class="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% else %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+  {% block content_unauth %}{% endblock %}
+{% endif %}
+</body>
+</html>
