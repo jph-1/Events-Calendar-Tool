@@ -87,6 +87,33 @@ itself, and because this sandbox's network policy blocks the outbound
 fetches the RSS/iCal adapter needs (see "Background cadence" below); nothing
 about the app itself is sandbox-specific.
 
+`wsgi.py` + the `Dockerfile` are the production path — `events web run`
+never runs code beyond local testing:
+
+```bash
+docker build -t events-tool-web .
+docker run -p 8000:8000 -v events-tool-data:/app/data events-tool-web
+# then, once: docker exec -it <container> python -m events_tool.cli web create-user --username you
+```
+
+The `-v` volume is not optional — `data/events.db`, `config/profile.json`,
+and `data/flask_secret.key` all live in `/app/data`/`/app/config` inside
+the container; without a persistent mount every redeploy starts from a
+blank calendar. Environment variables for a real deployment:
+
+| Variable | Purpose |
+|---|---|
+| `EVENTS_TOOL_SECRET_KEY` | Session-signing secret from your platform's secrets manager, instead of the local-file fallback (Fly.io secrets, Render/Railway env vars, etc.) |
+| `EVENTS_TOOL_HTTPS=1` | Marks the session cookie `Secure` — set this once you're actually behind HTTPS (any real deployment should be) |
+| `EVENTS_TOOL_DB_PATH` | Point at a different DB file if `/app/data/events.db` isn't where your volume is mounted |
+
+Any host with a persistent volume and normal (non-sandboxed) outbound
+networking works — a small VPS (DigitalOcean/Hetzner/Linode) gives full
+control for a few dollars a month; Fly.io or Railway give a simpler
+Docker-based deploy with a free/cheap tier and persistent volumes built
+in. This step needs your own account/billing on whichever you pick — it
+isn't something that can be provisioned from inside this environment.
+
 ## Principles this tool holds itself to
 
 - **Never fabricate.** No invented events, dates/times, sources, attendance,

@@ -4,3 +4,7 @@
 # The Phase 2 web app (events_tool.web) needs Flask, which brings in
 # Werkzeug (password hashing, dev server) as a transitive dependency.
 flask>=3.0
+
+# Real deployments serve the app through gunicorn (see wsgi.py) instead of
+# Flask's dev server, which explicitly isn't meant for production use.
+gunicorn>=21.0

@@ -8,6 +8,7 @@ the CLI opens one connection per invocation.
 """
 from __future__ import annotations
 
+import os
 import secrets
 from pathlib import Path
 
@@ -26,9 +27,15 @@ SECRET_KEY_PATH = PROJECT_ROOT / "data" / "flask_secret.key"
 
 
 def _load_or_create_secret_key() -> str:
-    """The session-signing secret is generated once and persisted locally.
-    Unlike data/events.db and config/profile.json, this is NOT tracked in
-    git (see .gitignore) — leaking it would let someone forge sessions."""
+    """The session-signing secret. Prefers the EVENTS_TOOL_SECRET_KEY env
+    var (the natural fit for platforms with a secrets manager — Fly.io
+    secrets, Render/Railway env vars — where persistent-file storage isn't
+    guaranteed across deploys); otherwise it's generated once and persisted
+    to a local file. Unlike data/events.db and config/profile.json, neither
+    form is tracked in git — leaking it would let someone forge sessions."""
+    env_key = os.environ.get("EVENTS_TOOL_SECRET_KEY")
+    if env_key:
+        return env_key
     if SECRET_KEY_PATH.exists():
         return SECRET_KEY_PATH.read_text(encoding="utf-8").strip()
     SECRET_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -73,9 +80,15 @@ def create_app(db_path=None, testing: bool = False) -> Flask:
     app.config["SECRET_KEY"] = _load_or_create_secret_key()
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    # Set EVENTS_TOOL_HTTPS=1 once this is actually served over HTTPS (any
+    # real deployment) so the session cookie is marked Secure. Left off by
+    # default so `events web run` still works for plain-HTTP local testing.
+    app.config["SESSION_COOKIE_SECURE"] = os.environ.get("EVENTS_TOOL_HTTPS") == "1"
     app.config["TESTING"] = testing
     if db_path is not None:
         app.config["DB_PATH"] = db_path
+    elif os.environ.get("EVENTS_TOOL_DB_PATH"):
+        app.config["DB_PATH"] = Path(os.environ["EVENTS_TOOL_DB_PATH"])
 
     @app.teardown_appcontext
     def close_db(exception=None):
