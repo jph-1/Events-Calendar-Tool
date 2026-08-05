@@ -228,6 +228,41 @@
       "url": "https://instagram.com/example_venue",
       "enabled": false,
       "notes": "Placeholder 'lead' source: a known account/page worth checking manually. No automated adapter exists for Instagram/Facebook (would need Meta Graph API credentials) \u2014 this just keeps it on your coverage radar as a source to check by hand, distinct from an automated feed."
+    },
+    {
+      "name": "houston-center-contemporary-craft-ical",
+      "type": "ical",
+      "url": "https://crafthouston.org/events/?ical=1",
+      "enabled": true,
+      "notes": "Confidence: medium-high. crafthouston.org's events page uses WordPress's 'The Events Calendar' plugin (confirmed via its standard 'sync to Google/iCal/Outlook' export language), whose default iCal export URL convention is <events-page>?ical=1. This URL was NOT directly fetched/verified (this sandbox blocks outbound fetches) - test with 'events ingest --source houston-center-contemporary-craft-ical' once on real hosting."
+    },
+    {
+      "name": "houston-public-library-lead",
+      "type": "lead",
+      "url": "https://calendar.houstonlibrary.org/calendar/",
+      "enabled": true,
+      "notes": "Confirmed (via search) to support iCal subscription per-event, but the exact feed/export URL wasn't found. Runs frequent free workshops - fits maker/books/gardening/family programming well. Visit directly once on real hosting to find the actual subscribe link, then reconfigure as type=ical."
+    },
+    {
+      "name": "artshound-haa-cultural-calendar-lead",
+      "type": "lead",
+      "url": "https://calendar-haatx.hookandshell.com/",
+      "enabled": true,
+      "notes": "Houston Arts Alliance's citywide cultural events aggregator (formerly Artshound) - potentially high-leverage since it may cover many galleries/theaters/museums in one feed. Custom platform (hookandshell.com), no confirmed feed format found via search. Needs direct page inspection once on real hosting."
+    },
+    {
+      "name": "orange-show-visionary-art-lead",
+      "type": "lead",
+      "url": "https://www.orangeshow.org/calendar",
+      "enabled": true,
+      "notes": "Orange Show Center for Visionary Art - exhibitions, concerts, films, classes/workshops. Platform/feed format unconfirmed via search. Needs direct page inspection once on real hosting."
+    },
+    {
+      "name": "asia-society-texas-lead",
+      "type": "lead",
+      "url": "https://asiasociety.org/texas/events",
+      "enabled": true,
+      "notes": "Asia Society Texas Center - uses Salesforce for ticketing (asiasocietytexascenter.my.salesforce-sites.com), so likely no simple WordPress-style ical export. Needs direct page inspection once on real hosting to find any feed option."
     }
   ]
 }

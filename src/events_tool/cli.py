@@ -95,7 +95,7 @@ def cmd_interest(args: argparse.Namespace) -> int:
 def cmd_source(args: argparse.Namespace) -> int:
     profile = config_mod.load_profile()
     if args.source_action == "add":
-        config_mod.add_source(profile, args.name, args.type, args.url, enabled=not args.disabled)
+        config_mod.add_source(profile, args.name, args.type, args.url, enabled=not args.disabled, notes=args.notes)
         config_mod.save_profile(profile)
         print(f"Added source: {args.name} ({args.type}) -> {args.url}")
     elif args.source_action == "remove":
@@ -106,6 +106,8 @@ def cmd_source(args: argparse.Namespace) -> int:
         for s in profile.sources:
             flag = "enabled" if s.enabled else "disabled"
             print(f"  {s.name} [{s.type}, {flag}] -> {s.url}")
+            if s.notes:
+                print(f"      {s.notes}")
     return 0
 
 
@@ -830,6 +832,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_src_add.add_argument("--type", required=True, choices=["rss", "ical", "manual", "newsletter", "lead"])
     p_src_add.add_argument("--url", default="")
     p_src_add.add_argument("--disabled", action="store_true")
+    p_src_add.add_argument("--notes", default="", help="e.g. confidence/provenance of the URL, what still needs verifying")
     p_src_add.set_defaults(func=cmd_source)
     p_src_rm = source_sub.add_parser("remove")
     p_src_rm.add_argument("--name", required=True)

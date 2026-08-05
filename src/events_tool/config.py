@@ -97,14 +97,16 @@ def remove_interest(profile: Profile, keyword: str) -> bool:
     return len(profile.interests) < before
 
 
-def add_source(profile: Profile, name: str, source_type: str, url: str, enabled: bool = True) -> Profile:
+def add_source(profile: Profile, name: str, source_type: str, url: str, enabled: bool = True, notes: str = "") -> Profile:
     for existing in profile.sources:
         if existing.name == name:
             existing.type = source_type
             existing.url = url
             existing.enabled = enabled
+            if notes:
+                existing.notes = notes
             return profile
-    profile.sources.append(Source(name=name, type=source_type, url=url, enabled=enabled))
+    profile.sources.append(Source(name=name, type=source_type, url=url, enabled=enabled, notes=notes))
     return profile
 
 

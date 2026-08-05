@@ -227,11 +227,22 @@ events interest remove "meetup"
 events interest list
 
 events source add --name my-favorite-venue --type ical \
-  --url "https://somevenue.example/events/?ical=1"
+  --url "https://somevenue.example/events/?ical=1" \
+  --notes "confirmed working 2026-08-10"
 events source add --name some-gallery-instagram --type lead \
   --url "https://instagram.com/some_gallery"   # known lead, checked manually
-events source list
+events source list   # notes show under each source
 ```
+
+Seeded with a handful of real Houston sources found via research (see
+`config/profile.example.json`): one `ical` source at medium-high
+confidence (a standard WordPress "The Events Calendar" URL convention,
+not directly fetch-verified — this sandbox blocks the fetch needed to
+confirm it), and several `lead` sources for calendars confirmed to exist
+but whose exact feed URL needs a real browser to find. Both cases are
+recorded in each source's `--notes`, and `events coverage` shows the
+distinction — check and correct these once real hosting removes the
+network restriction.
 
 `future_flags.use_geolocation` and the reserved `--use-device-location` flag
 on `events query` are placeholders for a **planned future release**: a

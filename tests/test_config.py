@@ -65,3 +65,18 @@ def test_add_and_remove_source(profile_path):
     assert "my-venue" in names
     assert config_mod.remove_source(profile, "my-venue") is True
     assert config_mod.remove_source(profile, "my-venue") is False
+
+
+def test_add_source_records_notes(profile_path):
+    profile = config_mod.init_profile(city="Houston", state="TX", path=profile_path)
+    config_mod.add_source(profile, "my-venue", "ical", "https://venue.example/events/?ical=1", notes="unverified, standard plugin URL convention")
+    source = next(s for s in profile.sources if s.name == "my-venue")
+    assert source.notes == "unverified, standard plugin URL convention"
+
+
+def test_add_source_updates_notes_on_existing_source(profile_path):
+    profile = config_mod.init_profile(city="Houston", state="TX", path=profile_path)
+    config_mod.add_source(profile, "my-venue", "ical", "https://venue.example/events/?ical=1", notes="first note")
+    config_mod.add_source(profile, "my-venue", "ical", "https://venue.example/events/?ical=1", notes="updated note")
+    source = next(s for s in profile.sources if s.name == "my-venue")
+    assert source.notes == "updated note"
