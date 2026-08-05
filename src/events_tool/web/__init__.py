@@ -15,6 +15,8 @@ from flask import Flask, current_app, g, redirect, session, url_for
 
 from events_tool import config as config_mod
 from events_tool import db as db_mod
+from events_tool.matching import score_candidate
+from events_tool.models import RawEventCandidate
 from events_tool.store import EventStore
 from events_tool.users import User, get_user
 from events_tool.web.colors import cat_color
@@ -56,6 +58,16 @@ def get_current_user() -> User | None:
     return g.user
 
 
+def matched_keywords_for(event) -> list[str]:
+    """Recomputed live against *current* active interests, not stored on
+    the event row — so if you edit your interests later, a card's "why
+    this matched" chips reflect that immediately rather than going stale."""
+    profile = get_profile()
+    candidate = RawEventCandidate(title=event["title"], description=event["description"])
+    result = score_candidate(candidate, profile.interests)
+    return result.matched_keywords if result.matched else []
+
+
 def create_app(db_path=None, testing: bool = False) -> Flask:
     app = Flask(__name__)
     app.config["SECRET_KEY"] = _load_or_create_secret_key()
@@ -73,7 +85,7 @@ def create_app(db_path=None, testing: bool = False) -> Flask:
 
     @app.context_processor
     def inject_globals():
-        return {"current_user": get_current_user(), "cat_color": cat_color}
+        return {"current_user": get_current_user(), "cat_color": cat_color, "matched_keywords": matched_keywords_for}
 
     from events_tool.web.routes.auth import bp as auth_bp
     from events_tool.web.routes.calendar import bp as calendar_bp

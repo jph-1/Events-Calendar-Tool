@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_event_card.html" as cards with context %}
 {% block title %}Review{% endblock %}
 {% block content %}
 <h2>Review queue</h2>
@@ -7,26 +8,9 @@
   <div class="empty-state">Nothing pending. New candidates from ingest/discover/ask show up here.</div>
 {% endif %}
 
-{% for ev in pending %}
-  {% set c = cat_color(ev.category) %}
-  <div class="card">
-    <h3>{{ ev.title }} <span class="chip" style="color:{{ c.text }};background:{{ c.bg }};font-size:11px;">{{ ev.category.replace('_',' ') }}</span>
-      <span class="verif-badge {{ 'automated' if ev.verification == 'automated-source' else 'lead' }}">{{ ev.verification }}</span>
-    </h3>
-    <div class="mono" style="font-size:12.5px;color:var(--ink-soft);">{{ ev.start_dt }}{% if ev.location_name %} @ {{ ev.location_name }}{% endif %}</div>
-    {% if ev.description %}<p style="font-size:13px;">{{ ev.description }}</p>{% endif %}
-    {% if ev.url %}<p style="font-size:12.5px;"><a href="{{ ev.url }}" target="_blank" rel="noopener noreferrer">{{ ev.url }}</a></p>{% endif %}
-
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-      <form method="post" action="{{ url_for('review.confirm', event_id=ev.id) }}" style="display:flex;gap:6px;flex:1;min-width:200px;">
-        <input type="text" name="notes" placeholder="Optional note (e.g. something you verified)" style="flex:1;">
-        <button type="submit" class="btn btn-primary btn-small">Confirm</button>
-      </form>
-      <form method="post" action="{{ url_for('review.reject', event_id=ev.id) }}" style="display:flex;gap:6px;flex:1;min-width:200px;">
-        <input type="text" name="reason" placeholder="Optional reason (e.g. wrong time found)" style="flex:1;">
-        <button type="submit" class="btn btn-danger btn-small">Reject</button>
-      </form>
-    </div>
-  </div>
-{% endfor %}
+<div class="card-grid">
+  {% for ev in pending %}
+    {{ cards.event_card(ev) }}
+  {% endfor %}
+</div>
 {% endblock %}

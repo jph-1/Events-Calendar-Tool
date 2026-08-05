@@ -1,0 +1,55 @@
+{% macro event_card(ev) %}
+{% set c = cat_color(ev.category) %}
+<div class="event-card">
+  <div class="event-card-top">
+    <span class="chip" style="color:{{ c.text }};background:{{ c.bg }}">{{ ev.category.replace('_',' ') }}</span>
+    {% if ev.url %}<a class="ext-link" href="{{ ev.url }}" target="_blank" rel="noopener noreferrer" title="Open source">↗</a>{% endif %}
+  </div>
+
+  <h3><a href="{{ url_for('calendar.event_detail', event_id=ev.id) }}">{{ '★ ' if ev.saved }}{{ ev.title }}</a></h3>
+  <div class="mono event-card-when">{{ ev.start_dt }}</div>
+
+  {% if ev.description %}
+    <p class="event-card-desc">{{ ev.description[:160] }}{% if ev.description|length > 160 %}…{% endif %}</p>
+  {% endif %}
+  {% if ev.location_name %}<div class="event-card-loc">📍 {{ ev.location_name }}{% if ev.neighborhood %} · {{ ev.neighborhood }}{% endif %}</div>{% endif %}
+
+  <div class="event-card-tags">
+    {% for kw in matched_keywords(ev) %}
+      <span class="reason-chip">Matches: {{ kw }}</span>
+    {% endfor %}
+    {% if ev.status == 'candidate' %}<span class="reason-chip new">Newly discovered</span>{% endif %}
+    <span class="verif-badge {{ 'automated' if ev.verification == 'automated-source' else 'lead' }}">{{ ev.verification }}</span>
+  </div>
+
+  <div class="event-card-actions">
+    <form class="inline-form" method="post" action="{{ url_for('calendar.add_to_interests', event_id=ev.id) }}">
+      <button type="submit" class="btn btn-small" title="Find more events like this">♡ Add to interests</button>
+    </form>
+    {% if ev.saved %}
+      <form class="inline-form" method="post" action="{{ url_for('calendar.unsave_event', event_id=ev.id) }}"><button type="submit" class="btn btn-small">🔖 Unsave</button></form>
+    {% else %}
+      <form class="inline-form" method="post" action="{{ url_for('calendar.save_event', event_id=ev.id) }}"><button type="submit" class="btn btn-small">🔖 Save for later</button></form>
+    {% endif %}
+    <form class="inline-form" method="post" action="{{ url_for('calendar.not_interested_event', event_id=ev.id) }}">
+      <button type="submit" class="btn btn-small btn-ghost">👎 Not for me</button>
+    </form>
+  </div>
+
+  <div class="event-card-primary">
+    {% if ev.status == 'candidate' %}
+      <form class="inline-form" style="flex:1;" method="post" action="{{ url_for('calendar.confirm_event', event_id=ev.id) }}">
+        <button type="submit" class="btn btn-primary" style="width:100%;">Confirm</button>
+      </form>
+    {% elif ev.status == 'attended' %}
+      <form class="inline-form" style="flex:1;" method="post" action="{{ url_for('calendar.unattend_event', event_id=ev.id) }}">
+        <button type="submit" class="btn btn-primary" style="width:100%;">✓ Attending — undo</button>
+      </form>
+    {% else %}
+      <form class="inline-form" style="flex:1;" method="post" action="{{ url_for('calendar.attend_event', event_id=ev.id) }}">
+        <button type="submit" class="btn btn-primary" style="width:100%;">Attend</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}

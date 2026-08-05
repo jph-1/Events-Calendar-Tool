@@ -47,14 +47,25 @@ events web run                          # http://127.0.0.1:5000
 # or: scripts/run_web.sh --host 0.0.0.0 --port 8080
 ```
 
-Pages: **Calendar** (month grid) and **Agenda** (today/week/30d/90d list),
-both with category and saved-only filters; **Ask/Search** — the same
-local-first, explicit-date-range, live-search-fallback flow as `events
-ask`, but as a form instead of file juggling; **Review** — confirm/reject
-buttons for pending candidates; **Coverage** — the same honest
-automated/researched/reference/none breakdown as `events coverage`;
-**Places** — list + drag-and-drop KML/CSV import; **Settings** —
-interests, sources, and your calendar subscription link.
+Pages: **Calendar** (month grid) and **Agenda** (today/week/30d/90d list,
+with a List/Cards toggle), both with category and saved-only filters;
+**Ask/Search** — the same local-first, explicit-date-range,
+live-search-fallback flow as `events ask`, but as a form instead of file
+juggling; **Review** — event cards for pending candidates; **Coverage** —
+the same honest automated/researched/reference/none breakdown as `events
+coverage`; **Places** — list + drag-and-drop KML/CSV import; **Settings**
+— interests, sources, and your calendar subscription link.
+
+**Event cards** (Review, and Agenda's Cards view) show why an event
+matched — "Matches: chess club" chips are computed live against your
+*current* active interests, not stored at ingestion time, so editing an
+interest later immediately changes which chips a card shows. Actions:
+**Attend** / undo, **Save for later**, **Not for me** (rejects from any
+status, not just candidates), and **Add to interests** — seeds a new
+interest keyword from the event (defaults to its venue name) in one
+click, so confirming you liked something naturally teaches the discovery
+loop to find more like it. Edit or remove what it guessed from Settings
+if the default keyword isn't quite right.
 
 **Auth**: one local account (`events web create-user`), Werkzeug-hashed
 password, signed-cookie session. Change your password with `events web

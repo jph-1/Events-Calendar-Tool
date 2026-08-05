@@ -6,8 +6,9 @@ from __future__ import annotations
 import calendar as calendar_module
 from datetime import date, datetime, timedelta
 
-from flask import Blueprint, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 
+from events_tool import config as config_mod
 from events_tool.models import CATEGORIES
 from events_tool.web import get_profile, get_store
 from events_tool.web.auth import login_required
@@ -126,10 +127,13 @@ def agenda_view():
             last_day = day_key
         groups[-1]["events"].append(row)
 
+    view = request.args.get("view", "list")
+
     return render_template(
         "calendar_agenda.html",
         groups=groups,
         range_choice=range_choice,
+        view=view,
         categories=CATEGORIES,
         active_categories=set(active_categories or []),
         saved_only=saved_only,
@@ -193,4 +197,49 @@ def recategorize_event(event_id):
 def set_notes(event_id):
     notes = request.form.get("notes", "")
     get_store().set_user_notes(event_id, notes)
+    return _redirect_back()
+
+
+@bp.route("/event/<int:event_id>/confirm", methods=["POST"])
+@login_required
+def confirm_event(event_id):
+    get_store().update_status(event_id, "confirmed")
+    return _redirect_back()
+
+
+@bp.route("/event/<int:event_id>/not-interested", methods=["POST"])
+@login_required
+def not_interested_event(event_id):
+    """The card's "Not for me" action — same effect as a review rejection,
+    but works from anywhere a card appears (agenda, ask results), not just
+    the review queue. Works from any status, since "actually I'm not
+    interested" is a valid call on something you'd already confirmed too."""
+    get_store().update_status(event_id, "rejected")
+    return _redirect_back()
+
+
+@bp.route("/event/<int:event_id>/add-to-interests", methods=["POST"])
+@login_required
+def add_to_interests(event_id):
+    """Turns "this event matched" into "find me more like it": seeds a new
+    interest keyword from the event, defaulting to its venue name (falls
+    back to a title fragment), tagged with the event's own category. The
+    keyword is editable afterward from Settings if the default guess is
+    off — this is meant to be a fast one-click add, not a form."""
+    store = get_store()
+    row = store.get_by_id(event_id)
+    if row is None:
+        flash("That event no longer exists.", "error")
+        return _redirect_back()
+
+    keyword = (row["location_name"] or "").strip()
+    if not keyword:
+        words = row["title"].split()
+        keyword = " ".join(words[:3]).strip(" -:,")
+    keyword = keyword.lower()
+
+    profile = config_mod.load_profile()
+    config_mod.add_interest(profile, keyword, row["category"])
+    config_mod.save_profile(profile)
+    flash(f"Added \"{keyword}\" → {row['category'].replace('_', ' ')} to your interests. Edit it anytime in Settings.", "success")
     return _redirect_back()
