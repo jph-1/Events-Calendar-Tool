@@ -99,6 +99,44 @@ def build_discovery_prompt(
     )
 
 
+def parse_event_item(
+    item: dict, source_name: str, item_label: str
+) -> tuple[Optional[tuple[RawEventCandidate, str]], Optional[str]]:
+    """Shared validation for one LLM-reported event object, used by both
+    discover-import and ask-import. Returns ((candidate, category), warning)
+    — candidate is None if the item was dropped, in which case warning
+    explains why. A warning can also accompany a non-None result (e.g. an
+    unrecognized category, downgraded to 'other' rather than dropped)."""
+    title = (item.get("title") or "").strip()
+    start_dt = (item.get("start_dt") or "").strip()
+    url = (item.get("url") or "").strip()
+
+    if not title or not start_dt:
+        return None, f"skipped {item_label}: missing title or start_dt"
+    if not url:
+        return None, f"skipped '{title}': no source url provided (required)"
+
+    category = (item.get("category") or "").strip() or "other"
+    warning = None
+    if category not in CATEGORIES:
+        warning = f"'{title}': category '{category}' not recognized, using 'other'"
+        category = "other"
+
+    candidate = RawEventCandidate(
+        title=title,
+        description=item.get("description", "") or "",
+        start_dt=start_dt,
+        end_dt=item.get("end_dt"),
+        location_name=item.get("location_name", "") or "",
+        address=item.get("address", "") or "",
+        neighborhood=item.get("neighborhood", "") or "",
+        url=url,
+        source_name=source_name,
+        source_type="assistant-research",
+    )
+    return (candidate, category), warning
+
+
 def parse_discovery_response(
     json_text: str, source_name: str = "discover"
 ) -> tuple[list[tuple[RawEventCandidate, str]], list[str]]:
@@ -113,34 +151,10 @@ def parse_discovery_response(
     warnings: list[str] = []
 
     for i, item in enumerate(data):
-        title = (item.get("title") or "").strip()
-        start_dt = (item.get("start_dt") or "").strip()
-        url = (item.get("url") or "").strip()
-
-        if not title or not start_dt:
-            warnings.append(f"skipped item {i}: missing title or start_dt")
-            continue
-        if not url:
-            warnings.append(f"skipped '{title}': no source url provided (required for discover-import)")
-            continue
-
-        category = (item.get("category") or "").strip() or "other"
-        if category not in CATEGORIES:
-            warnings.append(f"'{title}': category '{category}' not recognized, using 'other'")
-            category = "other"
-
-        candidate = RawEventCandidate(
-            title=title,
-            description=item.get("description", "") or "",
-            start_dt=start_dt,
-            end_dt=item.get("end_dt"),
-            location_name=item.get("location_name", "") or "",
-            address=item.get("address", "") or "",
-            neighborhood=item.get("neighborhood", "") or "",
-            url=url,
-            source_name=source_name,
-            source_type="assistant-research",
-        )
-        results.append((candidate, category))
+        result, warning = parse_event_item(item, source_name, f"item {i}")
+        if warning:
+            warnings.append(warning)
+        if result:
+            results.append(result)
 
     return results, warnings

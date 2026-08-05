@@ -280,6 +280,51 @@ events show --status candidate   # same as `events review`, without the prompts
 events show --saved              # your bookmarked events
 ```
 
+`events query` only ever searches what's *already* in your calendar. For
+"go check if this is happening and tell me," see `events ask` below.
+
+## Asking a specific question, with an explicit date range
+
+```bash
+events ask "find a chess club in houston"                    # defaults to --range week
+events ask "live music" --range today
+events ask "Formula 1 watch party" --range 30d
+events ask "art opening" --range custom --from 2026-09-01T00:00:00 --to 2026-09-15T00:00:00
+```
+
+Same prompt/structured-import shape as `discover`, but scoped to one
+specific question instead of a broad sweep, and — this is the important
+part — **the date range is always an explicit choice** (`today` / `week`
+/ `30d` / `90d` / `custom --from --to`), never something inferred from the
+question's wording. That was a real bug in earlier ad hoc testing: asking
+about a Formula 1 watch party silently got treated as "this week" without
+ever being asked.
+
+`events ask` checks your local calendar first (same as `events query`); if
+nothing matches, it prints a research prompt:
+
+```bash
+events ask "Formula 1 watch party" --out prompt.txt
+# run prompt.txt through a web-search-capable LLM, save its JSON reply
+events ask-import --structured response.json
+```
+
+The reply schema has two parts: `matches` (within your requested range —
+these land as review candidates like everything else) and
+`next_occurrence_suggestions` (found *outside* the range — e.g. no F1 race
+this week, but the next one is Aug 23). Suggestions are reported but **not
+added automatically**, since they're answering a different question than
+the one you asked:
+
+```
+1 suggestion(s) found OUTSIDE your requested range (not added automatically):
+  [0] F1 Dutch Grand Prix Watch Party — 2026-08-23T08:00:00 @ Grand Prix Plaza - Turn 1 Lounge
+      No F1 race this week - the next one is Aug 23, outside your 7-day window.
+      https://...
+
+To add one: events ask-import --structured <file> --add-suggested <index>
+```
+
 ## Understanding your coverage
 
 ```bash

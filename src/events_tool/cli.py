@@ -14,6 +14,7 @@ from pathlib import Path
 from events_tool import config as config_mod
 from events_tool import db as db_mod
 from events_tool import places as places_mod
+from events_tool.ask import RANGE_CHOICES, build_ask_prompt, parse_ask_response, resolve_range
 from events_tool.digest import render_coverage_text, render_html, render_markdown
 from events_tool.discovery import build_discovery_prompt, parse_discovery_response
 from events_tool.ics_export import build_calendar
@@ -471,6 +472,106 @@ def cmd_query(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_ask(args: argparse.Namespace) -> int:
+    profile = config_mod.load_profile()
+    store = _get_store()
+
+    if args.range != "custom" and (args.date_from or args.date_to):
+        print("error: --from/--to require --range custom", file=sys.stderr)
+        return 1
+
+    try:
+        date_from, date_to, range_label = resolve_range(args.range, custom_from=args.date_from, custom_to=args.date_to)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    parsed = parse_query(args.text, profile.interests, near=args.near)
+
+    rows = store.query(
+        category=parsed.category,
+        near=None if parsed.near_unlimited else parsed.near,
+        keyword=parsed.keywords[0] if parsed.keywords and not parsed.category else None,
+        date_from=date_from.isoformat(timespec="seconds"),
+        date_to=date_to.isoformat(timespec="seconds"),
+        statuses=["confirmed", "attended"],
+    )
+
+    if rows:
+        print(f"Found {len(rows)} event(s) for \"{args.text}\" within {range_label}:")
+        for row in rows:
+            _print_event_row(row, show_status=False)
+        return 0
+
+    print(f"No matches in your calendar for \"{args.text}\" within {range_label}.")
+    prompt = build_ask_prompt(args.text, profile.location.city, profile.location.state, date_from, date_to, range_label)
+    if args.out:
+        Path(args.out).write_text(prompt, encoding="utf-8")
+        print(f"Wrote research prompt to {args.out}.")
+        print("Run it through a web-search-capable LLM, save the JSON reply, then: events ask-import --structured <file>")
+    else:
+        print()
+        print(prompt)
+    return 0
+
+
+def cmd_ask_import(args: argparse.Namespace) -> int:
+    profile = config_mod.load_profile()
+    store = _get_store()
+    json_text = Path(args.structured).read_text(encoding="utf-8")
+    matches, suggestions, warnings = parse_ask_response(json_text, source_name=args.source_name)
+
+    added = deduped = 0
+    for candidate, category in matches:
+        _, was_new = store.insert_candidate(
+            candidate, category, profile.location.city, profile.location.state,
+            status="candidate", verification="assistant-researched",
+        )
+        if was_new:
+            added += 1
+        else:
+            deduped += 1
+
+    print(f"Matches within your requested range: {len(matches)} found, {added} added as candidates, {deduped} already known")
+
+    added_suggestion = None
+    if suggestions:
+        print(f"\n{len(suggestions)} suggestion(s) found OUTSIDE your requested range (not added automatically):")
+        for i, (candidate, category, note) in enumerate(suggestions):
+            print(f"  [{i}] {candidate.title} — {candidate.start_dt} @ {candidate.location_name or '(venue not listed)'} [{category}]")
+            print(f"      {note}")
+            print(f"      {candidate.url}")
+        if args.add_suggested is not None:
+            if 0 <= args.add_suggested < len(suggestions):
+                candidate, category, note = suggestions[args.add_suggested]
+                event_id, was_new = store.insert_candidate(
+                    candidate, category, profile.location.city, profile.location.state,
+                    status="candidate", verification="assistant-researched",
+                )
+                added_suggestion = event_id
+                print(f"\nAdded suggestion [{args.add_suggested}] as candidate #{event_id}: {candidate.title}")
+            else:
+                print(f"\nerror: no suggestion at index {args.add_suggested}", file=sys.stderr)
+                return 1
+        else:
+            print("\nTo add one: events ask-import --structured <file> --add-suggested <index>")
+
+    if warnings:
+        print(f"\n{len(warnings)} entries skipped:")
+        for w in warnings:
+            print(f"  - {w}")
+
+    total_found = len(matches) + len(suggestions) + len(warnings)
+    notes = "; ".join(warnings)
+    if added_suggestion:
+        notes = f"added suggestion #{added_suggestion}; {notes}" if notes else f"added suggestion #{added_suggestion}"
+    store.log_ingestion_run(
+        IngestionRun(None, args.source_name, _now_iso(), total_found, added, deduped, "ok", notes=notes)
+    )
+    print("\nAll of these need review (`events review`) before they count as confirmed — none are auto-confirmed.")
+    return 0
+
+
 def cmd_show(args: argparse.Namespace) -> int:
     store = _get_store()
     rows = store.query(
@@ -839,6 +940,27 @@ def build_parser() -> argparse.ArgumentParser:
         "with a confirmation prompt every time it's used. Not implemented yet.",
     )
     p_query.set_defaults(func=cmd_query)
+
+    p_ask = sub.add_parser(
+        "ask",
+        help='Ask a specific question with an explicit date range, e.g. events ask "chess club" --range week.',
+    )
+    p_ask.add_argument("text")
+    p_ask.add_argument("--range", choices=RANGE_CHOICES, default="week", help="Explicit date window — never inferred from the question text.")
+    p_ask.add_argument("--from", dest="date_from", default=None, help="Custom range start (ISO date/datetime); requires --range custom.")
+    p_ask.add_argument("--to", dest="date_to", default=None, help="Custom range end (ISO date/datetime); requires --range custom.")
+    p_ask.add_argument("--near", default=None, help='Neighborhood/area filter, or "no limit" for unlimited radius.')
+    p_ask.add_argument("--out", default=None, help="Write the research prompt to a file instead of printing it.")
+    p_ask.set_defaults(func=cmd_ask)
+
+    p_ask_import = sub.add_parser(
+        "ask-import",
+        help="Import an ask prompt's LLM reply. Matches land as review candidates; out-of-range suggestions do not, unless --add-suggested is given.",
+    )
+    p_ask_import.add_argument("--structured", required=True)
+    p_ask_import.add_argument("--source-name", dest="source_name", default="ask", help="Label for this run in the ingestion log.")
+    p_ask_import.add_argument("--add-suggested", type=int, default=None, help="Index of a next-occurrence suggestion to add as a candidate too.")
+    p_ask_import.set_defaults(func=cmd_ask_import)
 
     p_show = sub.add_parser("show", help="List events with structured filters.")
     p_show.add_argument("--category", default=None)
